@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+   
+    <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval'; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src *; img-src *; frame-src *; style-src * 'unsafe-inline';"> 
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Mi Netflix</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- <div class="logo">MiNetflix</div> -->
+    <div class="nav-tabs">
+        <button class="tab-btn active" data-tab="inicio">Inicio</button>
+        <button class="tab-btn" data-tab="peliculas">Películas</button>
+        <button class="tab-btn" data-tab="series">Series</button>
+        <button class="tab-btn" data-tab="mi-lista">Mi lista</button>
+        <button class="tab-btn" data-tab="favoritos">Favoritos</button>
+        <button class="tab-btn" data-tab="buscar">Buscar</button>
+    </div>
+
+    <!-- Contenedor para Inicio -->
+    <div id="contenido-inicio" class="tab-content active">
+        <div id="hero-carousel" class="hero-carousel">
+            <div class="hero-slide active">
+                <div class="hero-bg"></div>
+                <div class="hero-overlay"></div>
+                <div class="hero-content">
+                    <h2 class="hero-title"></h2>
+                    <div class="hero-meta">
+                        <span class="hero-year"></span>
+                        <span class="hero-duration"></span>
+                    </div>
+                    <p class="hero-synopsis"></p>
+                    <button class="hero-watch-btn">VER AHORA</button>
+                </div>
+            </div>
+            <button class="carousel-prev">❮</button>
+            <button class="carousel-next">❯</button>
+            <div class="carousel-dots"></div>
+        </div>
+        <div id="categories-container-inicio"></div>
+    </div>
+
+    <!-- Contenedor para Películas -->
+    <div id="contenido-peliculas" class="tab-content">
+        <div id="categories-container-peliculas"></div>
+    </div>
+
+    <!-- Contenedor para Series -->
+    <div id="contenido-series" class="tab-content">
+        <div id="categories-container-series"></div>
+    </div>
+
+    <!-- Contenedor para Mi lista-->
+    <div id="contenido-mi-lista" class="tab-content">
+        <div style="color:white; text-align:center; padding:50px;">Próximamente: Mi lista</div>
+    </div>
+
+    <!-- Contenedor para Mis Favosritos-->
+    <div id="contenido-favoritos" class="tab-content">
+        <div id="favoritos-container" style="padding: 20px;">
+            <h2 style="color:white; margin-bottom:20px; text-align: center; ">Mis Favoritos</h2>
+            <div id="favoritos-grid" class="favoritos-grid"></div>
+        </div>
+    </div>
+
+    <!-- Contenedor para Buscar -->
+    <div id="contenido-buscar" class="tab-content">
+        <div id="search-container" class="search-container">
+        <!-- Columna izquierda: teclado y búsqueda -->
+        <div class="search-left">
+            <div class="search-input-wrapper">
+                <input type="text" id="search-input" placeholder="Buscar películas, series..." autofocus>
+                <button id="search-btn" class="search-submit-btn">🔍</button>
+            </div>
+            <div id="keyboard-container" class="keyboard-container"></div>
+        </div>
+        <!-- Columna derecha: resultados -->
+        <div class="search-right">
+            <h2 id="search-results-title">Resultados</h2>
+            <div id="search-results-grid" class="search-results-grid"></div>
+        </div>
+    </div>
+</div>
+
+    <!-- Ventana de información -->
+    <div id="info-window" class="info-window" style="display: none;">
+        <div class="info-backdrop" id="info-backdrop"></div>
+        <div class="info-overlay"></div>
+        <div class="info-content-wrapper">
+            <button id="info-back-button" class="info-back-btn" onclick="cerrarInfoWindow()">Volver</button>
+            <div class="info-main">
+                <div class="info-details">
+                    <h1 id="info-title"></h1>
+                    <div class="info-meta">
+                        <span id="info-duration"></span>
+                        <span id="info-year"></span>
+                    </div>
+                    <p id="info-synopsis"></p>
+                </div>
+                <button id="info-watch-btn" class="info-watch-btn" onclick="reproducirDesdeInfo()">VER AHORA</button>
+                <button id="info-fav-btn" class="info-fav-btn">♡ Agregar a Favoritos</button>
+               <button id="info-unmute-btn" onclick="activarSonido()" style="display: none;background: rgba(255,255,255,0.2); color: white; border: 1px solid white; padding: 8px 16px; border-radius: 4px; margin-top: 8px; cursor: pointer;">🔊 Activar sonido</button>
+            </div>
+
+            <!-- Panel de series (temporadas y capítulos) -->
+            <div id="series-panel" class="series-panel" style="display: none;">
+                <div class="seasons-section">
+                    <h3>Temporadas</h3>
+                    <div id="seasons-container" class="seasons-container"></div>
+                </div>
+                <div class="episodes-section">
+                    <h3>Capítulos</h3>
+                    <div id="episodes-container" class="episodes-container"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reproductor a pantalla completa -->
+    <div id="player-fullscreen" style="display: none;">
+        <button id="back-button">← Volver al inicio</button>
+        <div id="player-iframe-container"></div>
+    </div>
+
+    <script src="js/data.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/navigation.js"></script>
+</body>
+</html>
