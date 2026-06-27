@@ -1,4 +1,5 @@
 // ==================== CONSTANTES GLOBALES ====================
+let moreResultsState = null; // { endpoint, page, categoryTitle, totalPages, isLoading }
 let currentMovieData = null;
 let trailerTimeout = null;      // ← AÑADIR
 let currentTrailerId = null; 
@@ -219,12 +220,23 @@ function playTrailer(videoId) {
 
 // ==================== BUSCADOR ====================
 async function performSearch(query) {
+    // Limpiar estado de "Ver más"
+    moreResultsState = null;
     const resultsGrid = document.getElementById('search-results-grid');
     const resultsTitle = document.getElementById('search-results-title');
+    const searchInput = document.getElementById('search-input');
+    
+    // Restaurar placeholder original
+    if (searchInput) {
+        searchInput.placeholder = 'Buscar películas, series...';
+    }
+    
+    if (resultsTitle) {
+        resultsTitle.textContent = 'Resultados';
+    }
     
     if (!query.trim()) {
         resultsGrid.innerHTML = `<div class="no-results">Escribe algo para buscar...</div>`;
-        resultsTitle.textContent = 'Resultados';
         return;
     }
 
@@ -360,6 +372,40 @@ function createKeyboard() {
     });
 }
 
+function createCategoryButtons() {
+    const container = document.querySelector('.categories-grid');
+    if (!container) return;
+
+    // Definir las categorías con su endpoint, título y tipo
+    const categories = [
+        { endpoint: "/movie/now_playing", title: "Estrenos recientes", type: "movie" },
+        { endpoint: "/movie/popular", title: "Películas populares", type: "movie" },
+        { endpoint: "/discover/movie?with_genres=28&sort_by=popularity.desc", title: "Acción", type: "movie" },
+        { endpoint: "/discover/movie?with_genres=28,14,878&sort_by=popularity.desc", title: "Superhéroes", type: "movie" },
+        { endpoint: "/discover/movie?with_genres=16&with_original_language=ja&sort_by=popularity.desc", title: "Anime (Japón)", type: "movie" },
+        { endpoint: "/discover/movie?with_genres=16,10751&sort_by=popularity.desc", title: "Animados para niños", type: "movie" },
+        { endpoint: "/discover/movie?with_genres=27&sort_by=popularity.desc", title: "Terror", type: "movie" },
+        { endpoint: "/discover/tv?with_networks=213&sort_by=first_air_date.desc", title: "Series nuevas en Netflix", type: "tv" },
+        { endpoint: "/tv/popular", title: "Series populares", type: "tv" },
+        { endpoint: "/discover/tv?with_networks=2739&sort_by=popularity.desc", title: "Series de Disney+", type: "tv" },
+        { endpoint: "/discover/tv?with_networks=2552&sort_by=popularity.desc", title: "Series de Apple TV+", type: "tv" },
+        { endpoint: "/discover/tv?with_genres=16&with_original_language=ja&certification_country=US&certification.lte=TV-14&sort_by=popularity.desc", title: "Anime (series)", type: "tv" },
+        // Puedes añadir más categorías si quieres (ej. Warner Bros, Disney películas, etc.)
+    ];
+
+    container.innerHTML = '';
+    categories.forEach(cat => {
+        const btn = document.createElement('button');
+        btn.textContent = cat.title;
+        btn.classList.add('cat-btn');
+        btn.addEventListener('click', () => {
+            // Al hacer clic, se comporta como "Ver más"
+            showMoreResults(cat.title, cat.endpoint, `cat-${cat.title}`, cat.type);
+        });
+        container.appendChild(btn);
+    });
+}
+
 // Función para cerrar la ventana de información y detener el tráiler
 function cerrarInfoWindow() {
     const infoWindow = document.getElementById('info-window');
@@ -472,7 +518,7 @@ async function loadDynamicRow(endpoint, rowId, categoryTitle, parentContainerId 
         
         // Crear la tarjeta "Ver más"
         const verMasCard = document.createElement('div');
-        verMasCard.classList.add('ver-mas-card', 'movie'); // reutiliza estilos de .movie
+        verMasCard.classList.add('ver-mas-card', 'movie');
         verMasCard.innerHTML = `
             <div class="ver-mas-content">
                 <span>Ver más</span>
@@ -480,10 +526,7 @@ async function loadDynamicRow(endpoint, rowId, categoryTitle, parentContainerId 
             </div>
         `;
         verMasCard.addEventListener('click', () => {
-            // Aquí irá la lógica de cargar más películas (paginación)
-            console.log(`Cargar más películas para la fila ${rowId}`);
-            // Por ahora solo un aviso
-            alert('Funcionalidad de "Ver más" en desarrollo');
+            showMoreResults(categoryTitle, endpoint, rowId);
         });
         rowElement.appendChild(verMasCard);
 
@@ -491,6 +534,132 @@ async function loadDynamicRow(endpoint, rowId, categoryTitle, parentContainerId 
     } catch (error) {
         console.error(`Error cargando ${categoryTitle}:`, error);
         rowElement.innerHTML = `<div style="color: red; padding: 20px;">Error al cargar ${categoryTitle}. Ver consola.</div>`;
+    }
+}
+
+function showMoreResults(categoryTitle, endpoint, rowId, contentType = 'movie') {
+    moreResultsState = {
+        endpoint: endpoint,
+        page: 1,
+        categoryTitle: categoryTitle,
+        totalPages: null,
+        isLoading: false,
+        contentType: contentType // Guardamos el tipo
+    };
+
+    // Cambiar a la pestaña de búsqueda
+    const tabBtn = document.querySelector('.tab-btn[data-tab="buscar"]');
+    if (tabBtn) tabBtn.click();
+
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) {
+        searchInput.value = '';
+        searchInput.placeholder = `Mostrando: ${categoryTitle}`;
+    }
+
+    const resultsTitle = document.getElementById('search-results-title');
+    if (resultsTitle) {
+        resultsTitle.textContent = `${categoryTitle} - Ver más`;
+    }
+
+    loadMoreResults();
+}
+
+async function loadMoreResults() {
+    if (!moreResultsState) return;
+    if (moreResultsState.isLoading) return;
+    if (moreResultsState.totalPages !== null && moreResultsState.page > moreResultsState.totalPages) return;
+
+    moreResultsState.isLoading = true;
+    const { endpoint, page, categoryTitle } = moreResultsState;
+
+    const resultsGrid = document.getElementById('search-results-grid');
+    if (!resultsGrid) return;
+
+    // Mostrar indicador de carga (puedes añadir un spinner)
+    if (page === 1) {
+        resultsGrid.innerHTML = '<div class="no-results">Cargando...</div>';
+    } else {
+        // Añadir un pequeño indicador al final de la lista
+        const loadingIndicator = document.createElement('div');
+        loadingIndicator.id = 'more-loading';
+        loadingIndicator.textContent = 'Cargando más...';
+        loadingIndicator.style.cssText = 'grid-column:1/-1; text-align:center; color:#aaa; padding:20px;';
+        resultsGrid.appendChild(loadingIndicator);
+    }
+
+    try {
+        // Construir la URL con paginación
+        const separator = endpoint.includes('?') ? '&' : '?';
+        const url = `https://api.themoviedb.org/3${endpoint}${separator}api_key=${API_KEY}&language=es-ES&page=${page}`;
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        // Guardar el total de páginas
+        moreResultsState.totalPages = data.total_pages || 1;
+
+        // Eliminar el indicador de carga (si existe)
+        const loadingEl = document.getElementById('more-loading');
+        if (loadingEl) loadingEl.remove();
+
+        if (page === 1) {
+            resultsGrid.innerHTML = ''; // Limpiar solo la primera vez
+        }
+
+        // Procesar los resultados
+        const results = data.results || [];
+        if (results.length === 0) {
+            if (page === 1) {
+                resultsGrid.innerHTML = '<div class="no-results">No hay más resultados.</div>';
+            }
+            moreResultsState.isLoading = false;
+            return;
+        }
+
+        // Determinar el tipo de contenido (movie o tv) a partir del endpoint
+        let contentType = 'movie';
+        if (endpoint.includes('/tv') || endpoint.includes('discover/tv')) {
+            contentType = 'tv';
+        }
+
+        results.forEach(item => {
+            const card = document.createElement('div');
+            card.classList.add('search-result-item');
+            card.tabIndex = 0;
+
+            const title = item.title || item.name || 'Título desconocido';
+            const poster = item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : 'images/no-poster.jpg';
+
+            card.innerHTML = `
+                <img src="${poster}" alt="${title}">
+                <div class="search-result-title">${title}</div>
+            `;
+
+            const mediaType = contentType; // o item.media_type si existe
+            card.addEventListener('click', () => {
+                const posterUrl = card.querySelector('img').src;
+                showMovieInfo(item.id, mediaType, title, item.original_language || '', posterUrl);
+            });
+
+            resultsGrid.appendChild(card);
+        });
+
+        // Incrementar página para la próxima carga
+        moreResultsState.page++;
+
+    } catch (error) {
+        console.error('Error cargando más resultados:', error);
+        const loadingEl = document.getElementById('more-loading');
+        if (loadingEl) loadingEl.remove();
+        if (page === 1) {
+            resultsGrid.innerHTML = `<div class="no-results">Error al cargar. Intenta de nuevo.</div>`;
+        }
+    } finally {
+        moreResultsState.isLoading = false;
     }
 }
 
@@ -1170,6 +1339,21 @@ function updateWatchButton(mediaType, title, season = null, episode = null) {
 
 // ==================== INICIALIZACIÓN ====================
 window.addEventListener("DOMContentLoaded", () => {
+
+    createCategoryButtons();
+
+    const searchRight = document.querySelector('.search-right');
+if (searchRight) {
+    searchRight.addEventListener('scroll', function() {
+        // Si estamos cerca del fondo (20px antes)
+        if (this.scrollTop + this.clientHeight >= this.scrollHeight - 20) {
+            if (moreResultsState && !moreResultsState.isLoading) {
+                loadMoreResults();
+            }
+        }
+    });
+}
+
 
     // Botón de favoritos
     const favBtn = document.getElementById('info-fav-btn');
