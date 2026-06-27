@@ -985,3 +985,39 @@ button:focus {
         grid-template-columns: 1fr;
     }
 }
+/* Categorías en el buscador */
+.search-categories {
+    margin-top: 20px;
+    padding: 15px;
+    background: #1a1a1a;
+    border-radius: 8px;
+    border: 1px solid #333;
+}
+
+.search-categories h3 {
+    color: #ddd;
+    font-size: 1.1rem;
+    margin-bottom: 12px;
+}
+
+.categories-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.cat-btn {
+    background: #2a2a2a;
+    color: white;
+    border: 1px solid #444;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.cat-btn:hover {
+    background: #e50914;
+    border-color: #e50914;
+}
