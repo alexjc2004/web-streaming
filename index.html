@@ -14,6 +14,7 @@
         <button class="tab-btn active" data-tab="inicio">Inicio</button>
         <button class="tab-btn" data-tab="peliculas">Películas</button>
         <button class="tab-btn" data-tab="series">Series</button>
+        <button class="tab-btn" data-tab="anime">Anime</button>
         <button class="tab-btn" data-tab="mi-lista">Mi lista</button>
         <button class="tab-btn" data-tab="favoritos">Favoritos</button>
         <button class="tab-btn" data-tab="buscar">Buscar</button>
@@ -90,6 +91,11 @@
     </div>
 </div>
 
+    <!-- Contenedor para Anime -->
+    <div id="contenido-anime" class="tab-content">
+    <div id="categories-container-anime"></div>
+</div>
+
     <!-- Ventana de información -->
     <div id="info-window" class="info-window" style="display: none;">
         <div class="info-backdrop" id="info-backdrop"></div>
@@ -115,7 +121,7 @@
                 <div class="seasons-section">
                     <h3>Temporadas</h3>
                     <div id="seasons-container" class="seasons-container"></div>
-                </div>
+                </div>                
                 <div class="episodes-section">
                     <h3>Capítulos</h3>
                     <div id="episodes-container" class="episodes-container"></div>
