@@ -48,8 +48,10 @@
 
 .movie img {
     width: 100%;
-    height: auto;
+    height: 100%;           /* ← Asegura que ocupe toda la tarjeta */
     display: block;
+    object-fit: cover;       /* ← Recorta la imagen para que llene el espacio sin deformarse */
+    aspect-ratio: 2 / 3;     /* ← Proporción típica de póster (opcional, pero mejora la consistencia) */
 }
 
 .movie-title {
@@ -569,37 +571,108 @@ button:focus {
     outline: none;
 }
 
-/* Botones de temporada y capítulo - sin bordes ni outline */
-.season-btn, .episode-btn {
-    background: rgba(255, 255, 255, 0.2);
-    border: none !important;
-    outline: 0 !important;
+/* ===== TEMPORADAS (ESTILO LISTA VERTICAL) ===== */
+.seasons-list, .episodes-list {
+    margin-bottom: 30px;
+}
+.seasons-list h3, .episodes-list h3 {
+    font-size: 1.2rem;
+    margin-bottom: 10px;
+}
+
+/* Contenedor de temporadas: vertical */
+.seasons-container {
+    display: flex;
+    flex-direction: column;   /* ← FORZAR VERTICAL */
+    gap: 0;                   /* Sin separación entre elementos */
+    max-height: 240px;        /* Altura máxima (ajústala) */
+    overflow-y: auto;         /* Scroll vertical */
+    overflow-x: hidden;       /* Evita scroll horizontal */
+    padding-right: 8px;       /* Espacio para no tapar el texto */
+    padding-bottom: 10px;
+    border: none;
+    outline: none;
+    flex-wrap: nowrap;        /* ← Evita que los elementos se envuelvan en filas */
+}
+
+/* Botones de temporada (sin fondo, solo texto) */
+.season-btn {
+    background: none !important;
+    border: none;
+    border-bottom: 1px solid #333;
+    color: #ddd;
+    font-size: 1rem;
+    padding: 10px 12px;
+    text-align: left;
+    width: 100%;              /* Ocupa todo el ancho */
+    cursor: pointer;
+    transition: color 0.2s, background 0.2s;
+    border-radius: 0;
     box-shadow: none !important;
+    outline: none !important;
+    flex-shrink: 0;           /* Evita que se encojan */
+}
+
+/* Hover: fondo muy sutil (casi transparente) */
+.season-btn:hover {
+    background: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Focus: sin cambios (mantener transparente) */
+.season-btn:focus {
+    background: transparent !important;
+    outline: none !important;
+}
+
+/* Seleccionado: texto rojo, fondo transparente o muy leve */
+.season-btn.selected {
+    color: #e50914 !important;
+    background: transparent !important; /* o rgba(229,9,20,0.05) si quieres muy leve */
+    border-color: #e50914;
+}
+
+/* Último elemento sin borde inferior */
+.season-btn:last-child {
+    border-bottom: none;
+}
+
+/* ===== EPISODIOS (mantener estilo original) ===== */
+.episodes-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    border: none;
+    outline: none;
+}
+
+.episode-btn {
+    background: rgba(255,255,255,0.2);
+    border: none;
     padding: 8px 16px;
     border-radius: 4px;
     color: white;
     font-size: 0.9rem;
     cursor: pointer;
-    transition: background 0.2s ease;
+    transition: background 0.2s, transform 0.2s;
 }
 
-/* Hover y focus: solo fondo rojo, sin bordes ni sombras */
-.season-btn:hover, .episode-btn:hover,
-.season-btn:focus, .episode-btn:focus {
+.episode-btn:hover {
     background: #e50914;
-    outline: 0 !important;
-    border: none !important;
-    box-shadow: none !important;
+    transform: scale(1.02);
 }
 
-/* Botón seleccionado (activo) */
-.season-btn.selected, .episode-btn.selected {
+.episode-btn.selected {
     background: #e50914;
-    border: none !important;
-    outline: 0 !important;
-    box-shadow: none !important;
+    box-shadow: 0 0 0 2px white;
     font-weight: bold;
 }
+
+/* Asegurar que los botones de temporada no hereden estilos de episodios */
+.episode-btn:focus {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
 
 /* Tarjeta "Ver más" */
 .ver-mas-card {
@@ -650,7 +723,7 @@ button:focus {
 
 .info-main {
     max-width: 50%;
-    margin-bottom: 40px;
+    margin-bottom: 5px;
 }
 
 .series-panel {
@@ -664,32 +737,18 @@ button:focus {
     flex: 1;
 }
 
-.seasons-container, .episodes-container {
+.episodes-container {
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
     margin-top: 10px;
-    max-height: 200px;
+    max-height: 240px;
     overflow-y: auto;
     scrollbar-width: thin;
     padding: 5px;
 }
 
-.season-btn, .episode-btn {
-    background: rgba(255,255,255,0.2);
-    border: none;
-    padding: 8px 16px;
-    border-radius: 4px;
-    color: white;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: all 0.2s;
-}
 
-.season-btn.selected, .episode-btn.selected {
-    background: #e50914;
-    box-shadow: 0 0 0 2px white;
-}
 
 /* Scroll horizontal para episodios (si son muchos) */
 .episodes-container {
@@ -1021,3 +1080,71 @@ button:focus {
     background: #e50914;
     border-color: #e50914;
 }
+
+.related-section {
+    margin-top: 20px;
+    border-top: 1px solid #333;
+    padding-top: 15px;
+}
+.related-section h3 {
+    font-size: 1.1rem;
+    margin-bottom: 10px;
+    color: #ddd;
+}
+.related-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.related-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #1a1a1a;
+    padding: 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.related-item:hover {
+    background: #2a2a2a;
+}
+.related-info {
+    flex: 1;
+}
+.related-title {
+    font-weight:lighter;
+    color: white;
+}
+.related-type {
+    font-size: 0.8rem;
+    color: #aaa;
+}
+/* Botones de resultados relacionados (estilo vertical, sin bordes) */
+.related-btn {
+    background: transparent;
+    color: white;
+    border: none;
+    font-size: 1.3rem;
+    padding: 10px 12px;
+    text-align: left;
+    width: 100%;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    border-bottom: 1px solid #8f0a0a;
+}
+
+.related-btn:hover {
+    background: rgba(173, 173, 173, 0.05);
+}
+
+.related-btn:active,
+.related-btn.selected {
+    color: #e50914; /* Rojo Netflix */
+    background: rgba(229, 9, 20, 0.1);
+}
+
+.related-btn:last-child {
+    border-bottom: none;
+}
+
