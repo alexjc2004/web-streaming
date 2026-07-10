@@ -33,7 +33,9 @@
                         <span class="hero-duration"></span>
                     </div>
                     <p class="hero-synopsis"></p>
-                    <button class="hero-watch-btn">VER AHORA</button>
+                    <div class="hero-buttons">
+                        <!-- Los botones se generan desde JavaScript -->
+                    </div>
                 </div>
             </div>
             <button class="carousel-prev">❮</button>
@@ -45,11 +47,51 @@
 
     <!-- Contenedor para Películas -->
     <div id="contenido-peliculas" class="tab-content">
+        <!-- NUEVO CARRUSEL PARA PELÍCULAS -->
+        <div id="hero-carousel-peliculas" class="hero-carousel">
+            <div class="hero-slide active">
+                <div class="hero-bg"></div>
+                <div class="hero-overlay"></div>
+                <div class="hero-content">
+                    <h2 class="hero-title"></h2>
+                    <div class="hero-meta">
+                        <span class="hero-year"></span>
+                        <span class="hero-duration"></span>
+                    </div>
+                    <p class="hero-synopsis"></p>
+                    <div class="hero-buttons"></div>
+                </div>
+            </div>
+            <button class="carousel-prev">❮</button>
+            <button class="carousel-next">❯</button>
+            <div class="carousel-dots"></div>
+        </div>
+        <!-- FIN CARRUSEL -->
         <div id="categories-container-peliculas"></div>
     </div>
 
     <!-- Contenedor para Series -->
     <div id="contenido-series" class="tab-content">
+        <!-- NUEVO CARRUSEL PARA SERIES -->
+        <div id="hero-carousel-series" class="hero-carousel">
+            <div class="hero-slide active">
+                <div class="hero-bg"></div>
+                <div class="hero-overlay"></div>
+                <div class="hero-content">
+                    <h2 class="hero-title"></h2>
+                    <div class="hero-meta">
+                        <span class="hero-year"></span>
+                        <span class="hero-duration"></span>
+                    </div>
+                    <p class="hero-synopsis"></p>
+                    <div class="hero-buttons"></div>
+                </div>
+            </div>
+            <button class="carousel-prev">❮</button>
+            <button class="carousel-next">❯</button>
+            <div class="carousel-dots"></div>
+        </div>
+        <!-- FIN CARRUSEL -->
         <div id="categories-container-series"></div>
     </div>
 
@@ -66,33 +108,51 @@
         </div>
     </div>
 
-    <!-- Contenedor para Buscar -->
-    <div id="contenido-buscar" class="tab-content">
-        <div id="search-container" class="search-container">
-        <!-- Columna izquierda: teclado y búsqueda -->
-        <div class="search-left">
+<!-- Contenedor para Buscar -->
+<div id="contenido-buscar" class="tab-content">
+    <div id="search-container" class="search-container">
+        <!-- Barra superior: filtros a la izquierda, input a la derecha -->
+        <div class="search-header">
+            <div class="search-filters">
+                <button class="filter-btn active" data-filter="movie">Películas</button>
+                <button class="filter-btn" data-filter="tv">Series</button>
+                <button class="filter-btn" data-filter="anime">Anime</button>
+            </div>
             <div class="search-input-wrapper">
                 <input type="text" id="search-input" placeholder="Buscar películas, series..." autofocus>
                 <button id="search-btn" class="search-submit-btn">🔍</button>
             </div>
-            <div id="keyboard-container" class="keyboard-container"></div>
-            <div id="search-categories" class="search-categories">
-            <h3>Explorar secciones</h3>
-            <div class="categories-grid">
-                <!-- Los botones se generarán dinámicamente desde JavaScript -->
-            </div>
         </div>
-        </div>
-        <!-- Columna derecha: resultados -->
-        <div class="search-right">
+        <!-- Resultados -->
+        <div class="search-results-wrapper">
             <h2 id="search-results-title">Resultados</h2>
             <div id="search-results-grid" class="search-results-grid"></div>
         </div>
     </div>
 </div>
 
-    <!-- Contenedor para Anime -->
-    <div id="contenido-anime" class="tab-content">
+<!-- Contenedor para Anime -->
+<div id="contenido-anime" class="tab-content">
+    <!-- NUEVO CARRUSEL PARA ANIME -->
+    <div id="hero-carousel-anime" class="hero-carousel">
+        <div class="hero-slide active">
+            <div class="hero-bg"></div>
+            <div class="hero-overlay"></div>
+            <div class="hero-content">
+                <h2 class="hero-title"></h2>
+                <div class="hero-meta">
+                    <span class="hero-year"></span>
+                    <span class="hero-duration"></span>
+                </div>
+                <p class="hero-synopsis"></p>
+                <div class="hero-buttons"></div>
+            </div>
+        </div>
+        <button class="carousel-prev">❮</button>
+        <button class="carousel-next">❯</button>
+        <div class="carousel-dots"></div>
+    </div>
+    <!-- FIN CARRUSEL -->
     <div id="categories-container-anime"></div>
 </div>
 
@@ -100,6 +160,9 @@
     <div id="info-window" class="info-window" style="display: none;">
         <div class="info-backdrop" id="info-backdrop"></div>
         <div class="info-overlay"></div>
+        <div id="info-loading" class="info-loading">
+        <div class="spinner"></div>
+        </div>
         <div class="info-content-wrapper">
             <button id="info-back-button" class="info-back-btn" onclick="cerrarInfoWindow()">Volver</button>
             <div class="info-main">
