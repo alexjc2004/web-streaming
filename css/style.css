@@ -27,6 +27,8 @@
     scroll-behavior: smooth;
     scrollbar-width: none;   /* Firefox */
     -webkit-overflow-scrolling: touch;
+    /* Añadir para que las tarjetas expandidas no se salgan del contenedor */
+    align-items: stretch; /* Para que todas las tarjetas tengan la misma altura */
 }
 
 .row::-webkit-scrollbar {
@@ -37,15 +39,17 @@
 .movie {
     flex: 0 0 auto;
     width: 220px;
-    border: none;
+    border: 2px solid transparent; /* base para transición */
     border-radius: 0px;
     overflow: hidden;
     background-color: #1f1f1f;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: transform 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.1), 
+                box-shadow 0.4s ease, 
+                border-color 0.4s ease;
     cursor: pointer;
     text-align: center;
+    will-change: transform, box-shadow; /* optimización */
 }
-
 .movie img {
     width: 100%;
     height: 100%;           /* ← Asegura que ocupe toda la tarjeta */
@@ -65,17 +69,13 @@
 
 .movie:hover,
 .movie:focus {
-    transform: scale(1.1);
-    /*box-shadow: 0 0 20px rgb(255, 255, 255);*/
+    transform: scale(1.08); /* un poco menos brusco */
     z-index: 10;
-    outline: 1px solid rgb(255, 0, 0);
-    outline-offset: 1px;
+    box-shadow: 0 0 25px rgba(229, 9, 20, 0.5);
+    border-color: #e50914;
+    outline: none; /* eliminamos outline para usar border */
 }
 
-/*.movie:hover .movie-title,
-.movie:focus .movie-title {
-    display: block;
-}*/
 
 body {
     background-color: #0f0f0f;
@@ -801,6 +801,7 @@ button:focus {
     height: calc(100vh - 150px);
     min-height: 500px;
     gap: 20px;
+    align-items: center;
 }
 
 .search-header {
@@ -885,7 +886,7 @@ button:focus {
 .search-results-wrapper {
     flex: 1;
     overflow-y: auto;
-    padding-right: 10px;
+    padding-right: 15px;
 }
 
 #search-results-title {
@@ -906,13 +907,15 @@ button:focus {
     border-radius: 0px;
     overflow: hidden;
     cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    border: 1px solid #333;
+    transition: transform 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.1), 
+                box-shadow 0.4s ease, 
+                border-color 0.4s ease;
+    border: 2px solid transparent;
     position: relative;
     aspect-ratio: 2 / 3;
-    opacity: 0; /* ← AÑADIR */
-    animation: fadeInLeft 0.6s ease forwards; /* ← AÑADIR */
-    will-change: transform, opacity; /* ← OPCIONAL, PARA OPTIMIZAR */
+    opacity: 0;
+    animation: fadeInLeft 0.6s ease forwards;
+    will-change: transform, opacity, box-shadow;
 }
 
 .search-result-item img {
@@ -923,8 +926,8 @@ button:focus {
 }
 
 .search-result-item:hover {
-    transform: scale(1.05);
-    box-shadow: 0 0 20px rgba(229, 9, 20, 0.4);
+    transform: scale(1.08);
+    box-shadow: 0 0 25px rgba(229, 9, 20, 0.4);
     border-color: #e50914;
     z-index: 2;
 }
@@ -960,6 +963,7 @@ button:focus {
     .search-container {
         padding: 15px 20px;
         height: auto;
+        gap: 12px;
     }
     .search-header {
         flex-direction: column;
@@ -976,6 +980,7 @@ button:focus {
 @media (max-width: 600px) {
     .search-results-grid {
         grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
     }
     .filter-btn {
         font-size: 0.85rem;
@@ -1017,20 +1022,22 @@ button:focus {
 }
 
 .favorito-item {
-    max-width: 200px;           /* ← añade esto */
-    justify-self: center; 
+    max-width: 200px;
+    justify-self: center;
     background: #1f1f1f;
     border-radius: 8px;
     overflow: hidden;
     cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s;
-    border: 1px solid #333;
+    transition: transform 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.1), 
+                box-shadow 0.4s ease, 
+                border-color 0.4s ease;
+    border: 2px solid transparent;
 }
 
 .favorito-item:hover,
 .favorito-item:focus {
-    transform: scale(1.04);
-    box-shadow: 0 0 20px rgba(229, 9, 14, 0.4);
+    transform: scale(1.08);
+    box-shadow: 0 0 25px rgba(229, 9, 20, 0.4);
     border-color: #e50914;
 }
 
@@ -1355,14 +1362,6 @@ button:focus {
     animation: fadeInLeft 0.6s ease forwards;
 }
 
-.movie:hover,
-.movie:focus {
-    transform: scale(1.1) !important;
-    z-index: 10;
-    outline: 1px solid rgb(255, 0, 0);
-    outline-offset: 1px;
-}
-
 #keyboard-container,
 #search-categories {
     display: none !important;
@@ -1410,4 +1409,198 @@ button:focus {
     .search-filters {
         justify-content: center;
     }
+}
+.info-meta {
+    color: #aaa;
+    margin: 8px 0 12px 0;
+}
+
+/* ===== HOVER INFO EN TARJETAS ===== */
+.movie {
+    position: relative;
+    overflow: hidden;
+}
+
+.movie img {
+    transition: filter 0.3s ease;
+}
+
+.movie:hover img {
+    filter: brightness(0.3) blur(2px);
+}
+
+.movie-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+    box-sizing: border-box;
+}
+
+.movie:hover .movie-overlay {
+    opacity: 1;
+}
+
+.movie-title-hover {
+    font-size: 1.3rem;
+    font-weight: bold;
+    margin-bottom: 4px;
+    line-height: 1.2;
+}
+
+.movie-meta-hover {
+    font-size: 0.8rem;
+    color: #ccc;
+    margin-bottom: 6px;
+}
+
+.movie-synopsis-hover {
+    font-size: 0.9rem;
+    line-height: 1.4;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;   /* antes 3, ahora 4 líneas */
+    -webkit-box-orient: vertical;
+    margin-bottom: 6px;
+}
+
+.movie-genres-hover {
+    font-size: 0.8rem;
+    color: #aaa;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Ajuste para que el overlay no tape el hover de la tarjeta */
+.movie:hover {
+    transform: scale(1.05);
+    z-index: 10;
+}
+
+/* ===== TARJETAS RECIENTES EXPANDIBLES ===== */
+.recent-item {
+    position: relative;
+    width: 220px;
+    height: 330px; /* Altura fija para mantener consistencia (ajústala según tu diseño) */
+    flex: 0 0 auto;
+    transition: width 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.1),
+                transform 0.4s ease,
+                box-shadow 0.4s ease,
+                z-index 0.4s ease;
+    z-index: 1;
+    overflow: visible; /* Para que el contenido expandido no se recorte */
+}
+
+.recent-item.expanded {
+    width: 700px;
+    z-index: 10;
+    transform: scale(1.02);
+    box-shadow: 0 0 30px rgba(229, 9, 20, 0.3);
+    border-color: #e50914;
+        /* Asegurar que la altura no cambie */
+    height: 330px;
+}
+
+/* Contenedor del contenido expandido (se superpone al interior de la tarjeta) */
+.recent-expanded-content {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+    overflow: hidden;
+    background: #1f1f1f;
+    z-index: 20;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 0;
+    pointer-events: auto;
+}
+
+/* Fondo de la expansión (backdrop o poster) */
+.expanded-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center 30%;
+    background-repeat: no-repeat;
+    z-index: 0;
+    transition: filter 0.4s ease;
+}
+
+/* Información superpuesta */
+.expanded-info {
+    position: relative;
+    z-index: 1;
+    padding: 20px 25px;
+    background: linear-gradient(90deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 100%);
+    color: white;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    height: 100%;
+    width: 100%;
+    align-items: flex-start;  /* ← Añade esto */
+    text-align: left;
+    
+}
+
+.expanded-title {
+    font-size: 1.8rem;
+    font-weight: bold;
+    margin-bottom: 6px;
+    line-height: 1.2;
+    justify-content: flex-end;
+}
+
+.expanded-meta {
+    font-size: 1.4rem;
+    color: #ccc;
+    margin-bottom: 12px;
+}
+
+.expanded-watch-btn {
+    padding: 0%;
+    background: #e5091400;
+    color: white;
+    border: none;
+    font-size: 1.5rem;
+    font-weight: bold;
+    /*border-radius: 4px;*/
+    cursor: pointer;
+    transition: transform 0.2s, background 0.2s;
+    align-self: flex-start;
+    /*box-shadow: 0 4px 12px rgba(0,0,0,0.4);*/
+}
+
+/* Ajuste para que el overlay de la tarjeta no se vea cuando está expandida */
+.recent-item.expanded .movie-overlay {
+    opacity: 0 !important;
+    pointer-events: none;
+}
+
+.recent-item.expanded img {
+    filter: brightness(0.3) blur(4px);
+}
+
+/* Asegurar que el contenido expandido tenga bordes redondeados (opcional) */
+.recent-expanded-content {
+    border-radius: inherit;
 }
