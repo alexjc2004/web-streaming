@@ -1055,7 +1055,6 @@ async function loadTabContent(tabId) {
             await loadDynamicRow("/movie/now_playing", "row-estrenos-inicio", "Estrenos recientes", container.id);
             insertLeaderboardBanner(container, 'after'); // Banner después de la primera fila
             await loadDynamicRow("/discover/tv?sort_by=first_air_date.desc&first_air_date.lte=2026-12-31&vote_average.gte=5&vote_count.gte=10", "row-series-recientes", "Series recientes", container.id, 'es-ES', 'tv');
-            insertLeaderboardBanner(container, 'after');
             await loadDynamicRow("/movie/popular", "row-populares-inicio", "Películas populares", container.id);
             await loadDynamicRow("/discover/movie?with_genres=16,10751&sort_by=popularity.desc", "row-animados-inicio", "Animados para niños", container.id);
         }
