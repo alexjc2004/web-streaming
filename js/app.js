@@ -3314,12 +3314,35 @@ function updateWatchButton(mediaType, title, season = null, episode = null) {
 }
 }
 
+// ==================== POPUNDER (CLIC EN CARRUSEL) ====================
+let popunderLoaded = false;
+
+function loadPopunder() {
+    if (popunderLoaded) return;
+    popunderLoaded = true;
+    const script = document.createElement('script');
+    script.src = 'https://pl30421603.effectivecpmnetwork.com/46/1d/2d/461d2dd94f730891520b7ed75a0205df.js';
+    script.async = true;
+    document.head.appendChild(script);
+    console.log('🔄 Popunder activado');
+}
+
 // ==================== INICIALIZACIÓN ====================
+
 window.addEventListener("DOMContentLoaded", () => {
     wakeUpAnimeApi();
     loadGenreMaps();
     createCategoryButtons();
  
+        // --- POPUNDER: clic en carrusel (excluyendo botones) ---
+    document.addEventListener('click', function(e) {
+        const slide = e.target.closest('.hero-slide');
+        if (!slide) return;
+        if (e.target.closest('.hero-btn')) return;
+        loadPopunder();
+    });
+
+    
     // Filtros de búsqueda
     const filterBtns = document.querySelectorAll('.filter-btn');
     filterBtns.forEach(btn => {
