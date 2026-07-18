@@ -1393,7 +1393,7 @@ async function loadDynamicRow(endpoint, rowId, categoryTitle, parentContainerId 
                 <div class="movie-overlay">
                     <div class="movie-info">
                         <div class="movie-title-hover">${title}</div>
-                        <div class="movie-meta-hover">${getRecentLabel(item)}</div>
+                        <div class="movie-meta-hover">${mediaType === 'movie' ? 'Película' : 'Serie'}${year ? ` • ${year}` : ''}</div>
                         <div class="movie-synopsis-hover">${synopsisShort}</div>
                         <div class="movie-genres-hover">${genreNames}</div>
                     </div>
