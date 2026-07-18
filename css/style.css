@@ -1608,3 +1608,10 @@ button:focus {
 .recent-expanded-content {
     border-radius: inherit;
 }
+#ad-native-banner,
+.ad-native-banner {
+    max-width: 728px;
+    width: 100%;
+    margin: 20px auto;
+    overflow: hidden;
+}
