@@ -184,6 +184,7 @@ function insertLeaderboardBanner(container, position) {
     }
 }
 
+
 // Formatea minutos a "Xh Ymin" o "Xmin"
 function formatRuntime(minutes) {
     if (!minutes || minutes <= 0) return 'Duración no disponible';
@@ -300,7 +301,7 @@ function createCategoryStructure(categoryTitle, rowId) {
     window.addEventListener('resize', updateButtonsVisibility);
     // Llamar después de cargar el contenido (con un pequeño retraso)
     setTimeout(updateButtonsVisibility, 150);
-
+    
     return categoryDiv;
 }
 
@@ -3334,15 +3335,15 @@ window.addEventListener("DOMContentLoaded", () => {
     loadGenreMaps();
     createCategoryButtons();
  
-        // --- POPUNDER: clic en carrusel (excluyendo botones) ---
-    document.addEventListener('click', function(e) {
-        const slide = e.target.closest('.hero-slide');
-        if (!slide) return;
-        if (e.target.closest('.hero-btn')) return;
-        loadPopunder();
-    });
+// --- POPUNDER: clic en cualquier parte (excepto reproductor y ventana de info) ---
+document.addEventListener('click', function(e) {
+    // Excluir clics dentro del reproductor o la ventana de información
+    if (e.target.closest('#player-fullscreen') || e.target.closest('#info-window')) {
+        return;
+    }
+    loadPopunder();
+});
 
-    
     // Filtros de búsqueda
     const filterBtns = document.querySelectorAll('.filter-btn');
     filterBtns.forEach(btn => {
