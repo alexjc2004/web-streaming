@@ -515,10 +515,14 @@ body {
 #info-synopsis {
     font-size: 1rem;
     line-height: 1.5;
-    margin-bottom: 30px;
-    max-height: 200px;
-    overflow-y: auto;
-    padding-right: 20px;
+    margin-bottom: 20px;
+    max-height: 10em;          /* 4 líneas * 1.5 = 6em */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 5;    /* 4 líneas */
+    -webkit-box-orient: vertical;
+    padding-right: 0;
 }
 .info-watch-btn {
     background: #e5091400;
