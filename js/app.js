@@ -148,6 +148,41 @@ async function wakeUpAnimeApi() {
     }
 }
 
+// ==================== BANNER 728x90 (HighPerformanceFormat) ====================
+function insertLeaderboardBanner(container, position) {
+    const bannerDiv = document.createElement('div');
+    bannerDiv.style.cssText = 'position:relative; border:2px solid #ff0000; border-radius:3px; margin:12px auto; max-width:728px; background:#000000; padding:6px 6px 4px 6px;';
+    
+    // Etiqueta "Anuncios"
+    const label = document.createElement('span');
+    label.style.cssText = 'position:absolute; top:-10px; left:10px; background:#ff0000; color:#ffffff; font-size:11px; font-weight:bold; padding:0 8px; border-radius:0; line-height:20px; z-index:5;';
+    label.textContent = 'Anuncios';
+    bannerDiv.appendChild(label);
+
+    // Código del anuncio (con script de HighPerformanceFormat)
+    const script1 = document.createElement('script');
+    script1.textContent = `
+        atOptions = {
+            'key' : '19cbe30c18ac6bad1fb1578de26d5617',
+            'format' : 'iframe',
+            'height' : 90,
+            'width' : 728,
+            'params' : {}
+        };
+    `;
+    bannerDiv.appendChild(script1);
+
+    const script2 = document.createElement('script');
+    script2.src = 'https://www.highperformanceformat.com/19cbe30c18ac6bad1fb1578de26d5617/invoke.js';
+    bannerDiv.appendChild(script2);
+
+    // Insertar en la posición indicada
+    if (position === 'after') {
+        container.appendChild(bannerDiv);
+    } else if (position === 'before') {
+        container.insertBefore(bannerDiv, container.firstChild);
+    }
+}
 
 // Formatea minutos a "Xh Ymin" o "Xmin"
 function formatRuntime(minutes) {
@@ -1018,6 +1053,7 @@ async function loadTabContent(tabId) {
         if (container) {
             loadRecentRow();
             await loadDynamicRow("/movie/now_playing", "row-estrenos-inicio", "Estrenos recientes", container.id);
+            insertLeaderboardBanner(container, 'after'); // Banner después de la primera fila
             await loadDynamicRow("/discover/tv?sort_by=first_air_date.desc&first_air_date.lte=2026-12-31&vote_average.gte=5&vote_count.gte=10", "row-series-recientes", "Series recientes", container.id, 'es-ES', 'tv');
             await loadDynamicRow("/movie/popular", "row-populares-inicio", "Películas populares", container.id);
             await loadDynamicRow("/discover/movie?with_genres=16,10751&sort_by=popularity.desc", "row-animados-inicio", "Animados para niños", container.id);
@@ -1028,13 +1064,17 @@ async function loadTabContent(tabId) {
         const container = document.getElementById('categories-container-peliculas');
         if (container) {
             await loadDynamicRow("/movie/now_playing", "row-estrenos-pelis", "Estrenos recientes", container.id);
+            insertLeaderboardBanner(container, 'after'); // Banner después de la primera fila
             await loadDynamicRow("/discover/movie?with_companies=174&sort_by=popularity.desc", "row-warner-bros", "Warner Bros. Pictures", container.id, 'es-ES', 'movie');
             await loadDynamicRow("/discover/movie?with_companies=2&sort_by=popularity.desc", "row-disney-peliculas", "Disney (Walt Disney Pictures)", container.id, 'es-ES', 'movie');
             await loadDynamicRow("/discover/movie?with_companies=19551&sort_by=popularity.desc", "row-apple-peliculas", "Apple Studios", container.id, 'es-ES', 'movie');
+              // ← inserta después de la primera fila
             await loadDynamicRow("/discover/movie?with_genres=28&sort_by=popularity.desc", "row-accion-pelis", "Acción", container.id);
             await loadDynamicRow("/discover/movie?with_genres=28,14,878&sort_by=popularity.desc", "row-superheroes-pelis", "Superhéroes", container.id);
+              // ← inserta después de la primera fila
             await loadDynamicRow("/discover/movie?with_genres=16,10751&sort_by=popularity.desc", "row-animados-pelis", "Animados para niños", container.id);
             await loadDynamicRow("/discover/movie?with_genres=27&sort_by=popularity.desc", "row-terror-pelis", "Terror", container.id);
+              // ← inserta después de la primera fila
         }
     } else if (tabId === 'series') {
         // Cargar carrusel de series (emisión actual, orden aleatorio)
@@ -1042,9 +1082,12 @@ async function loadTabContent(tabId) {
         const container = document.getElementById('categories-container-series');
         if (container) {
             await loadDynamicRow("/discover/tv?with_networks=213&sort_by=first_air_date.desc&first_air_date.lte=2026-06-15", "row-series-nuevas-netflix", "Series nuevas en Netflix", container.id, 'es-ES', 'tv');
+            insertLeaderboardBanner(container, 'after'); // Banner después de la primera fila
             await loadDynamicRow("/tv/popular", "row-series-populares", "Series populares", container.id, 'es-ES', 'tv');
+              // ← inserta después de la primera fila
             await loadDynamicRow("/discover/tv?with_networks=2739&sort_by=popularity.desc", "row-disney-plus", "Series de Disney+", container.id, 'es-ES', 'tv');
             await loadDynamicRow("/discover/tv?with_networks=2552&sort_by=popularity.desc", "row-apple-tv", "Series de Apple TV+", container.id, 'es-ES', 'tv');
+              // ← inserta después de la primera fila
             await loadDynamicRow("/discover/tv?with_genres=16,10751&certification_country=US&certification=TV-Y&sort_by=popularity.desc", "row-series-preescolar", "Series para niños pequeños", container.id, 'es-ES', 'tv');
         }
     } else if (tabId === 'buscar') {
@@ -3276,20 +3319,7 @@ window.addEventListener("DOMContentLoaded", () => {
     wakeUpAnimeApi();
     loadGenreMaps();
     createCategoryButtons();
-
-    // Evento de scroll para cargar más resultados en el buscador
-    /*window.addEventListener('scroll', function() {
-    const scrollTop = window.scrollY || document.documentElement.scrollTop;
-    const windowHeight = window.innerHeight;
-    const documentHeight = document.documentElement.scrollHeight;
-    // Si estamos a menos de 300px del final
-    if (scrollTop + windowHeight >= documentHeight - 300) {
-        if (moreResultsState && !moreResultsState.isLoading) {
-            loadMoreResults();
-        }
-    }
-    });*/
-
+ 
     // Filtros de búsqueda
     const filterBtns = document.querySelectorAll('.filter-btn');
     filterBtns.forEach(btn => {
