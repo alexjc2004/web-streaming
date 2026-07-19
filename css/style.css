@@ -373,8 +373,8 @@ body {
 
 .dot {
     display: inline-block;
-    width: 12px;
-    height: 12px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
     background: #bbb;
     margin: 0 6px;
@@ -1495,30 +1495,53 @@ button:focus {
 /* ===== TARJETAS RECIENTES EXPANDIBLES ===== */
 .recent-item {
     position: relative;
-    width: 220px;
-    height: 330px; /* Altura fija para mantener consistencia (ajústala según tu diseño) */
+    width: 300px;            /* Tamaño fijo horizontal */
+    height: 170px;           /* Proporción 16:9 aprox */
     flex: 0 0 auto;
-    transition: width 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.1),
-                transform 0.4s ease,
-                box-shadow 0.4s ease,
-                z-index 0.4s ease;
+    border: 2px solid transparent;
+    border-radius: 4px;
+    overflow: hidden;
+    background-color: #1f1f1f;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+    cursor: pointer;
     z-index: 1;
-    overflow: visible; /* Para que el contenido expandido no se recorte */
 }
 
-.recent-item.expanded {
-    width: 700px;
-    z-index: 10;
-    transform: scale(1.02);
-    box-shadow: 0 0 30px rgba(229, 9, 20, 0.3);
-    border-color: #e50914;
-        /* Asegurar que la altura no cambie */
-    height: 330px;
+/* El fondo (backdrop o póster) */
+.recent-item .expanded-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center 30%;
+    background-repeat: no-repeat;
+    z-index: 0;
+    /* El desenfoque se aplica desde el estilo inline, así que no lo duplicamos */
 }
 
-/* Contenedor del contenido expandido (se superpone al interior de la tarjeta) */
+/* La imagen de fondo (se oscurece y desenfoca) */
+.recent-item img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    filter: brightness(0.4) blur(2px);
+    transition: filter 0.3s ease;
+}
+
+/* El overlay normal (estilo tarjeta vertical) lo ocultamos para los recientes */
+.recent-item .movie-overlay {
+    display: none !important;
+}
+
+/* Contenedor del contenido expandido (SIEMPRE visible) */
 .recent-expanded-content {
-    display: none;
+    display: flex !important;   /* Forzamos que siempre se vea */
     position: absolute;
     top: 0;
     left: 0;
@@ -1526,15 +1549,15 @@ button:focus {
     height: 100%;
     border-radius: inherit;
     overflow: hidden;
-    background: #1f1f1f;
     z-index: 20;
     flex-direction: column;
     justify-content: flex-end;
     padding: 0;
-    pointer-events: auto;
+    pointer-events: none;       /* Para que los clics pasen al contenedor padre */
 }
 
-/* Fondo de la expansión (backdrop o poster) */
+
+/* Fondo borroso (usa el poster) */
 .expanded-backdrop {
     position: absolute;
     top: 0;
@@ -1545,15 +1568,14 @@ button:focus {
     background-position: center 30%;
     background-repeat: no-repeat;
     z-index: 0;
-    transition: filter 0.4s ease;
 }
 
-/* Información superpuesta */
+/* Capa de información (texto y botón) */
 .expanded-info {
     position: relative;
     z-index: 1;
-    padding: 20px 25px;
-    background: linear-gradient(90deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 100%);
+    padding: 15px 20px;
+    background: linear-gradient(90deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.2) 100%);
     color: white;
     text-shadow: 0 2px 8px rgba(0,0,0,0.8);
     display: flex;
@@ -1561,37 +1583,43 @@ button:focus {
     justify-content: flex-end;
     height: 100%;
     width: 100%;
-    align-items: flex-start;  /* ← Añade esto */
+    align-items: flex-start;
     text-align: left;
-    
+}
+
+/* Cuando la tarjeta está expandida, el contenido se muestra */
+.recent-item.expanded .recent-expanded-content {
+    display: flex;               /* Mostramos el contenido expandido */
 }
 
 .expanded-title {
-    font-size: 1.8rem;
+    font-size: 1.2rem;
     font-weight: bold;
-    margin-bottom: 6px;
+    margin-bottom: 2px;
     line-height: 1.2;
-    justify-content: flex-end;
 }
 
 .expanded-meta {
-    font-size: 1.4rem;
+    font-size: 0.8rem;
     color: #ccc;
-    margin-bottom: 12px;
+    margin-bottom: 6px;
 }
 
 .expanded-watch-btn {
-    padding: 0%;
-    background: #e5091400;
-    color: white;
+    padding: 0;
+    background: transparent;
+    color: #ffffff;
     border: none;
-    font-size: 1.5rem;
+    font-size: 0.9rem;
     font-weight: bold;
-    /*border-radius: 4px;*/
     cursor: pointer;
-    transition: transform 0.2s, background 0.2s;
     align-self: flex-start;
-    /*box-shadow: 0 4px 12px rgba(0,0,0,0.4);*/
+    pointer-events: auto;      /* Solo el botón recibe clics */
+    transition: color 0.2s;
+}
+
+.expanded-watch-btn:hover {
+    color: white;
 }
 
 /* Ajuste para que el overlay de la tarjeta no se vea cuando está expandida */
@@ -1604,14 +1632,239 @@ button:focus {
     filter: brightness(0.3) blur(4px);
 }
 
-/* Asegurar que el contenido expandido tenga bordes redondeados (opcional) */
-.recent-expanded-content {
-    border-radius: inherit;
+/* Efecto hover en la tarjeta (muy sutil) */
+.recent-item:hover {
+    transform: scale(1.02);
+    border-color: #e50914;
+    box-shadow: 0 0 20px rgba(229, 9, 20, 0.3);
 }
-#ad-native-banner,
-.ad-native-banner {
-    max-width: 728px;
-    width: 100%;
-    margin: 20px auto;
-    overflow: hidden;
+.recent-item:hover img {
+    filter: brightness(0.3) blur(3px);
+}
+
+/* ===== RESPONSIVE PARA MÓVILES ===== */
+@media (max-width: 768px) {
+    .recent-item {
+        width: 260px;
+        height: 146px; /* 16:9 */
+    }
+    .expanded-title {
+        font-size: 1rem;
+    }
+    .expanded-meta {
+        font-size: 0.7rem;
+    }
+    .expanded-watch-btn {
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .recent-item {
+        width: 220px;
+        height: 124px;
+    }
+    .expanded-info {
+        padding: 10px 15px;
+    }
+    .expanded-title {
+        font-size: 0.9rem;
+    }
+}
+
+
+.favoritos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 20px;
+    justify-content: center;
+}
+
+@media (max-width: 768px) {
+    .info-content-wrapper {
+        padding-left: 5%;
+        padding-top: 2vh;
+    }
+    #info-title {
+        font-size: 2rem;
+    }
+    .info-meta {
+        font-size: 1rem;
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+    #info-synopsis {
+        font-size: 0.9rem;
+        -webkit-line-clamp: 4;
+    }
+    .info-watch-btn {
+        font-size: 1rem;
+        padding: 8px 20px;
+    }
+    .info-fav-btn {
+        font-size: 1rem;
+        padding: 6px 16px;
+    }
+    .series-panel {
+        flex-direction: column;
+        gap: 20px;
+        width: 90%;
+        margin-top: 10px;
+    }
+    .seasons-container {
+        max-height: 150px;
+    }
+    .episodes-container {
+        max-height: 150px;
+    }
+}
+
+@media (max-width: 600px) {
+    .nav-tabs {
+        gap: 8px;
+        padding: 8px 15px;
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        -webkit-overflow-scrolling: touch;
+    }
+    .tab-btn {
+        font-size: 0.9rem;
+        padding: 6px 12px;
+        white-space: nowrap;
+    }
+}
+
+@media (max-width: 768px) {
+    .search-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 15px;
+    }
+    .search-input-wrapper {
+        max-width: 100%;
+    }
+    #search-input {
+        font-size: 1rem;
+        padding: 8px 12px;
+    }
+    .search-submit-btn {
+        font-size: 1rem;
+        padding: 8px 12px;
+    }
+    .filter-btn {
+        font-size: 0.8rem;
+        padding: 6px 14px;
+    }
+}
+
+@media (max-width: 480px) {
+    .banner-nativo {
+        max-width: 90%;
+        margin: 10px auto;
+    }
+}
+
+
+
+
+/* ===== VENTANA DE INFORMACIÓN: LAYOUT HORIZONTAL EN PANTALLAS PEQUEÑAS ===== */
+@media (max-width: 700px), (max-height: 900px) {
+    .info-window .info-content-wrapper {
+        padding-left: 4%;
+        padding-top: 2vh;
+        width: 100%;
+        align-items: flex-start;
+        justify-content: flex-start;
+    }
+
+    .info-main {
+        max-width: 100% !important;
+        width: 100%;
+        padding-right: 4%;
+        margin-bottom: 5px;
+    }
+
+    #info-title {
+        font-size: 2rem;
+        margin-bottom: 6px;
+        word-break: break-word;
+    }
+
+    .info-meta {
+        font-size: 0.9rem;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    #info-synopsis {
+        font-size: 0.9rem;
+        -webkit-line-clamp: 4;
+        max-height: 6em;
+        margin-bottom: 12px;
+    }
+
+    .info-watch-btn,
+    .info-fav-btn {
+        font-size: 1rem;
+        padding: 8px 18px;
+        display: inline-block;
+        margin-right: 10px;
+        margin-top: 5px;
+    }
+
+    .info-back-btn {
+        font-size: 1rem;
+        padding: 8px 20px;
+        margin-bottom: 12px;
+    }
+
+    .series-panel {
+        flex-direction: column;
+        gap: 15px;
+        width: 100%;
+        margin-top: 10px;
+        padding-right: 4%;
+    }
+
+    .seasons-section,
+    .episodes-section {
+        flex: 1 1 100%;
+        width: 100%;
+    }
+
+    .seasons-container {
+        max-height: 120px;
+    }
+
+    .episodes-container {
+        max-height: 120px;
+        gap: 8px;
+    }
+
+    .season-btn {
+        font-size: 0.9rem;
+        padding: 6px 10px;
+    }
+
+    .episode-btn {
+        font-size: 0.8rem;
+        padding: 5px 12px;
+    }
+}
+
+@media (max-width: 600px) {
+    .recent-item.expanded {
+        height: 165px;
+        width: 85vw;             /* Ocupa el 85% del ancho de la pantalla */
+        max-width: 250px;        /* Límite máximo para que no se estire demasiado */
+    }
+    .expanded-title {
+        font-size: 1.2rem;
+    }
+    .expanded-meta {
+        font-size: 0.9rem;
+    }
+    .expanded-watch-btn {
+        font-size: 1rem;
+    }
 }
