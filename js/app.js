@@ -13,7 +13,7 @@ let isPlayerControlsVisible = true;
 let infiniteObserver = null;
 let loadedResultIds = new Set();
 let recentExpandedElement = null;
-let recentUpdating = false;
+let expandedCard = null;
 // Al principio de app.js
 const animeInfoCache = {};
 // Estado de los carruseles (cada uno con su propio índice, intervalo y slides)
@@ -22,7 +22,6 @@ let loadedCarousels = {};
 const API_KEY = "73de3bc08df97d70e1cb81ad38422c03";
 // Variables para controlar los listeners globales del reproductor
 let globalPlayerListenersAdded = false;
-
 let genreMapMovie = {};
 let genreMapTv = {};
 
@@ -580,6 +579,7 @@ async function loadAnimeRowIfAvailable(endpoint, rowId, categoryTitle, parentCon
             return false;
         }
 
+        console.log("ANTES", rowElement.children.length);
         rowElement.innerHTML = '';
         let cardIndex = 0;
         const filtered = animeAV1Results.filter(isSafeForAllAges);
@@ -1029,7 +1029,7 @@ async function playAnimeEpisode(episodeUrl) {
             saveProgress(identifier, 'anime', null, episodeNumber);
         }
         addToRecent(
-            currentMovieData.tmdbId || currentMovieData.animeTitle,
+            currentMovieData.tmdbId,
             'anime',
             currentMovieData.animeTitle || currentMovieData.title,
             currentMovieData.posterPath || '',
@@ -1164,23 +1164,6 @@ function getWatchButtonText(mediaType, identifier, isMovie = false) {
         }
     }
     return 'VER AHORA';
-}
-
-// ==================== OBTENER BACKDROP DE TMDB ====================
-async function getBackdropFromTmdb(tmdbId, mediaType) {
-    if (!tmdbId) return null;
-    try {
-        const endpoint = mediaType === 'movie' ? 'movie' : 'tv';
-        const url = `https://api.themoviedb.org/3/${endpoint}/${tmdbId}?api_key=${API_KEY}&language=es-ES`;
-        const resp = await fetch(url);
-        const data = await resp.json();
-        if (data.backdrop_path) {
-            return `https://image.tmdb.org/t/p/w1280${data.backdrop_path}`;
-        }
-        return null;
-    } catch (e) {
-        return null;
-    }
 }
 
 
@@ -1403,7 +1386,7 @@ function reproducirDesdeInfo() {
 
 
         const { tmdbId, mediaType, title, originalLang, season, episode, posterPath } = currentMovieData;
-        addToRecent(tmdbId, mediaType, title, posterPath, originalLang);
+        //addToRecent(tmdbId, mediaType, title, posterPath, originalLang);
         infoWindow.style.display = 'none';
         clearInfoFadeTimer();
         clearTrailer();
@@ -2541,6 +2524,8 @@ async function updateAnimeSlideContent(slide, anime, index) {
                 const infoData = await fetchAnimeApi(`/info?url=${encodeURIComponent(anime.url)}`);
                 const episodes = infoData.episodes || [];
                 if (episodes.length > 0) {
+                const poster = anime.image || '';
+                //addToRecent(anime.tmdbId, 'anime', anime.title, poster, 'ja', anime.url, false);
                     // Reproducir el primer episodio
                     playAnimeEpisode(episodes[0].url);
                 } else {
@@ -2614,6 +2599,8 @@ async function updateSlideContent(slide, movie, index, mediaType = 'movie') {
             // Obtener primer episodio
             const episodeInfo = await getFirstEpisode(movie.id);
             if (episodeInfo) {
+                const poster = movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : '';
+                //addToRecent(movie.id, 'tv', movie.name, poster, movie.original_language);
                 playMedia(movie.id, 'tv', movie.name, movie.original_language, episodeInfo.season, episodeInfo.episode);
             } else {
                 alert('No se pudo encontrar el primer episodio de esta serie.');
@@ -2725,7 +2712,30 @@ function addToRecent(tmdbId, mediaType, title, posterPath, originalLang, animeUr
         } else {
             id = title;
         }
-        recents = recents.filter(item => item.id !== id || item.mediaType !== mediaType);
+
+        console.log("Nuevo:", {
+            id,
+            tmdbId,
+            mediaType,
+            title,
+            animeUrl
+        });
+
+        console.table(recents);
+
+        recents = recents.filter(item => {
+            const eliminar =
+                (tmdbId && item.tmdbId == tmdbId) ||
+                (animeUrl && item.animeUrl === animeUrl) ||
+                (item.title === title && item.mediaType === mediaType);
+
+            if (eliminar) {
+                console.log("Eliminando:", item);
+            }
+
+            return !eliminar;
+        });
+
         recents.unshift({
             id: id,
             tmdbId: tmdbId,
@@ -2738,6 +2748,7 @@ function addToRecent(tmdbId, mediaType, title, posterPath, originalLang, animeUr
             timestamp: Date.now()
         });
         if (recents.length > 10) recents.pop();
+        console.table(recents);
         localStorage.setItem('recentItems', JSON.stringify(recents));
         loadRecentRow();
     } catch (e) {
@@ -2745,182 +2756,26 @@ function addToRecent(tmdbId, mediaType, title, posterPath, originalLang, animeUr
     }
 }
 
-let expandedCard = null; // Para saber qué tarjeta está expandida
-
-async function expandRecentCard(card) {
-    // Si ya hay otra tarjeta expandida, la contraemos
-    if (expandedCard && expandedCard !== card) {
-        collapseRecentCard(expandedCard);
-    }
-
-    // Evitar expandir si ya está expandida
-    if (card.classList.contains('expanded')) return;
-
-    // Obtener datos desde el dataset
-    const tmdbId = card.dataset.tmdbId;
-    const mediaType = card.dataset.mediaType;
-    const title = card.dataset.title;
-    const poster = card.dataset.poster;
-    // 🔹 NUEVO: obtener identifier y animeUrl
-    const identifier = card.dataset.identifier || tmdbId;
-    const animeUrl = card.dataset.animeUrl || '';
-    const isMovie = card.dataset.isMovie === 'true';
-// Si mediaType es 'anime' y isMovie es true, tratarlo como película
-
-    // ----- PROGRESO Y EPISODIOS -----
-    let progress = null;
-    let episodeText = '';
-    let totalEpisodes = '';
-
-    // Solo obtener progreso y episodios si NO es película de anime
-    if (!(mediaType === 'anime' && isMovie)) {
-        if (identifier) {
-            progress = getProgress(identifier, mediaType);
-        }
-        // Obtener total episodios para series y anime
-        if (mediaType === 'tv' && tmdbId) {
-            try {
-                const url = `https://api.themoviedb.org/3/tv/${tmdbId}?api_key=${API_KEY}&language=es-ES`;
-                const resp = await fetch(url);
-                const data = await resp.json();
-                if (data.number_of_episodes) {
-                    totalEpisodes = `${data.number_of_episodes} episodios`;
-                }
-            } catch (e) {}
-        } else if (mediaType === 'anime' && !isMovie && animeUrl) {
-            // Intentar obtener desde caché
-            let info = animeInfoCache[animeUrl];
-            if (!info) {
-                // Si no está en caché, hacer la petición
-                try {
-                    const data = await fetchAnimeApi(`/info?url=${encodeURIComponent(animeUrl)}`);
-                    animeInfoCache[animeUrl] = data;
-                    info = data;
-                } catch (e) {
-                    console.warn('No se pudo obtener info del anime:', animeUrl);
-                }
-            }
-            if (info && info.totalEpisodes) {
-                totalEpisodes = `${info.totalEpisodes} episodios`;
-            }
-        }
-
-        // Construir texto de episodio según el progreso (solo para series)
-        if (mediaType === 'tv' && progress && progress.season !== undefined && progress.episode !== undefined) {
-            episodeText = `Capítulo ${progress.episode}`;
-        } else if (mediaType === 'anime' && !isMovie && progress && progress.episode !== undefined) {
-            episodeText = `Capítulo ${progress.episode}`;
-        }
-    } else {
-        // Para películas de anime, solo necesitamos el progreso (para saber si está vista)
-        if (identifier) {
-            progress = getProgress(identifier, mediaType);
-        }
-    }
-
-    // ----- BACKDROP -----
-    let backdropUrl = '';
-    if (tmdbId && (mediaType === 'movie' || mediaType === 'tv' || mediaType === 'anime')) {
-        try {
-            const endpoint = mediaType === 'movie' ? 'movie' : 'tv';
-            const url = `https://api.themoviedb.org/3/${endpoint}/${tmdbId}?api_key=${API_KEY}&language=es-ES`;
-            const resp = await fetch(url);
-            const data = await resp.json();
-            if (data.backdrop_path) {
-                backdropUrl = `https://image.tmdb.org/t/p/w1280${data.backdrop_path}`;
-            }
-        } catch (e) {}
-    }
-
-    // ----- ACTUALIZAR CONTENIDO EXPANDIDO -----
-    const expandedContent = card.querySelector('.recent-expanded-content');
-    const backdropDiv = expandedContent.querySelector('.expanded-backdrop');
-    const titleEl = expandedContent.querySelector('.expanded-title');
-    const metaEl = expandedContent.querySelector('.expanded-meta');
-    const watchBtn = expandedContent.querySelector('.expanded-watch-btn');
-
-    // Fondo
-    if (backdropUrl) {
-        backdropDiv.style.backgroundImage = `url('${backdropUrl}')`;
-        backdropDiv.style.filter = 'blur(0px)';
-    } else {
-        backdropDiv.style.backgroundImage = `url('${poster}')`;
-        backdropDiv.style.filter = 'blur(10px) brightness(0.4)';
-    }
-
-    // Título
-    titleEl.textContent = title;
-
-    // Meta: tipo + total episodios + episodio actual
-    let metaText = mediaType === 'movie' ? 'Película' : (mediaType === 'tv' ? 'Serie' : (isMovie ? 'Película' : 'Anime'));
-    if (!(mediaType === 'anime' && isMovie)) {
-        if (totalEpisodes) metaText += ` • ${totalEpisodes}`;
-    }
-    metaEl.textContent = metaText;
-
-    // === TEXTO DEL BOTÓN ===
-    let watchText = 'VER AHORA';
-    if (item.mediaType === 'movie' || (item.mediaType === 'anime' && item.isMovie)) {
-        // ✅ Para películas (normales o de anime): si existe progreso, es porque ya se empezó a ver
-        if (progress) {
-            watchText = 'CONTINUAR VIENDO';
-        }
-    } else {
-        // Series o anime (no película)
-        if (progress && progress.episode !== undefined) {
-            watchText = `CONTINUAR CAPÍTULO ${progress.episode}`;
-        }
-    }
-    watchBtn.textContent = watchText;
-
-    // Evento del botón
-    watchBtn.onclick = (e) => {
-        e.stopPropagation();
-        card.click();
-        collapseRecentCard(card);
-    };
-
-    // Expandir la tarjeta (aumentar ancho)
-    card.style.width = '700px';
-    card.classList.add('expanded');
-    expandedContent.style.display = 'flex';
-    expandedCard = card;
-}
-
-function collapseRecentCard(card) {
-    if (!card) return;
-    if (!card.classList.contains('expanded')) return;
-
-    // Contraer ancho
-    card.style.width = '220px';
-    card.classList.remove('expanded');
-
-    // Ocultar contenido expandido
-    const expandedContent = card.querySelector('.recent-expanded-content');
-    if (expandedContent) {
-        expandedContent.style.display = 'none';
-    }
-
-    if (expandedCard === card) {
-        expandedCard = null;
-    }
-}
 
 function loadRecentRow() {
+    console.log(
+    "loadRecentRow",
+    document.querySelectorAll("#row-recientes").length
+);
+
     const container = document.getElementById('categories-container-inicio');
     if (!container) return;
 
-    // Eliminar la fila anterior si existe
-    const oldCategory = container.querySelector('.category[data-category-id="recientes"]');
-    if (oldCategory) oldCategory.remove();
 
-    // Crear nueva categoría y fila
-    const categoryDiv = document.createElement('div');
-    categoryDiv.classList.add('category');
-    categoryDiv.setAttribute('data-category-id', 'recientes');
-    categoryDiv.innerHTML = `<h2>Recientes</h2><div class="row" id="row-recientes"></div>`;
-    container.prepend(categoryDiv);
-    const rowElement = document.getElementById('row-recientes');
+    let rowElement = document.getElementById('row-recientes');
+    if (!rowElement) {
+        const categoryDiv = document.createElement('div');
+        categoryDiv.classList.add('category');
+        categoryDiv.setAttribute('data-category-id', 'recientes');
+        categoryDiv.innerHTML = `<h2>Mi Lista</h2><div class="row" id="row-recientes"></div>`;
+        container.prepend(categoryDiv);
+        rowElement = document.getElementById('row-recientes');
+    }
 
     let recents = [];
     try {
@@ -2934,271 +2789,106 @@ function loadRecentRow() {
         return;
     }
 
+    // Limitar a 5 (o el número que quieras)
     recents = recents.slice(0, 5);
 
-    // Función para obtener backdrop de un item
-    async function getItemBackdrop(item) {
-        if ((item.mediaType === 'movie' || item.mediaType === 'tv') && item.tmdbId) {
-            try {
-                const endpoint = item.mediaType === 'movie' ? 'movie' : 'tv';
-                const url = `https://api.themoviedb.org/3/${endpoint}/${item.tmdbId}?api_key=${API_KEY}&language=es-ES`;
-                const resp = await fetch(url);
-                const data = await resp.json();
-                if (data.backdrop_path) {
-                    return `https://image.tmdb.org/t/p/w1280${data.backdrop_path}`;
-                }
-            } catch (e) {}
+    console.log("ANTES", rowElement.children.length);
+    rowElement.innerHTML = '';
+    let cardIndex = 0;
+
+    recents.forEach(item => {
+        const card = document.createElement('div');
+        card.classList.add('recent-item');
+
+        let poster;
+        if (item.posterPath && item.posterPath.startsWith('http')) {
+            poster = item.posterPath;
+        } else if (item.posterPath) {
+            poster = `https://image.tmdb.org/t/p/w500${item.posterPath}`;
+        } else {
+            poster = "images/no-poster.jpg";
         }
-        return null;
-    }
 
-    // Cargar todos los backdrops en paralelo
-    Promise.all(recents.map(item => getItemBackdrop(item))).then(backdrops => {
-        // Ahora construir las tarjetas
-        rowElement.innerHTML = ''; // Asegurar limpieza
+        const identifier = item.tmdbId || item.id || item.animeUrl || item.title;
+        const buttonText = getWatchButtonText(item.mediaType, identifier, item.isMovie || false);
 
-        recents.forEach((item, index) => {
-            const backdropUrl = backdrops[index];
-            const poster = item.posterPath && item.posterPath.startsWith('http') 
-                ? item.posterPath 
-                : (item.posterPath ? `https://image.tmdb.org/t/p/w500${item.posterPath}` : 'images/no-poster.jpg');
+        card.dataset.tmdbId = item.tmdbId || '';
+        card.dataset.mediaType = item.mediaType || 'movie';
+        card.dataset.title = item.title || '';
+        card.dataset.originalLang = item.originalLang || '';
+        card.dataset.poster = poster;
+        card.dataset.animeUrl = item.animeUrl || '';
+        card.dataset.identifier = identifier;
 
-            const identifier = item.tmdbId || item.id || item.animeUrl || item.title;
-            const buttonText = getWatchButtonText(item.mediaType, identifier, item.isMovie || false);
-
-            const card = document.createElement('div');
-            card.classList.add('movie', 'recent-item');
-            card.style.width = '340px';
-            card.style.height = '180px';
-
-            // Guardar datos en dataset
-            card.dataset.tmdbId = item.tmdbId || '';
-            card.dataset.mediaType = item.mediaType || 'movie';
-            card.dataset.title = item.title || '';
-            card.dataset.originalLang = item.originalLang || '';
-            card.dataset.poster = poster;
-            card.dataset.animeUrl = item.animeUrl || '';
-            card.dataset.identifier = identifier;
-
-            const bgImage = backdropUrl || poster;
-            const blurAmount = backdropUrl ? 'blur(0.1px)' : 'blur(0.1px)';
-            const brightness = backdropUrl ? 'brightness(1)' : 'brightness(1)';
-
-            card.innerHTML = `
-                <div class="recent-expanded-content">
-                    <div class="expanded-backdrop" style="background-image: url('${bgImage}'); filter: ${blurAmount} ${brightness};"></div>
-                    <div class="expanded-info">
-                        <div class="expanded-title">${item.title || 'Sin título'}</div>
-                        <div class="expanded-meta">${getRecentLabel(item)}</div>
-                        <button class="expanded-watch-btn">${buttonText}</button>
-                    </div>
+        // Usamos el póster como fondo (no obtenemos backdrops para evitar asincronía)
+        card.innerHTML = `
+            <div class="recent-expanded-content">
+                <div class="expanded-backdrop" style="background-image: url('${poster}'); filter: blur(0.2px) brightness(0.5);"></div>
+                <div class="expanded-info">
+                    <div class="expanded-title">${item.title || 'Sin título'}</div>
+                    <div class="expanded-meta">${getRecentLabel(item)}</div>
+                    <button class="expanded-watch-btn">${buttonText}</button>
                 </div>
-            `;
+            </div>
+        `;
 
-            // Evento click en la tarjeta (abrir info)
-            card.addEventListener('click', async function(e) {
-                if (e.target.closest('.expanded-watch-btn')) return;
-                const tmdbId = this.dataset.tmdbId;
-                const mediaType = this.dataset.mediaType;
-                const title = this.dataset.title;
-                const originalLang = this.dataset.originalLang;
-                const posterUrl = this.dataset.poster;
-                const animeUrl = this.dataset.animeUrl;
+        // Evento click para abrir info
+        card.addEventListener('click', async function(e) {
+            if (e.target.closest('.expanded-watch-btn')) return;
+            const tmdbId = this.dataset.tmdbId;
+            const mediaType = this.dataset.mediaType;
+            const title = this.dataset.title;
+            const originalLang = this.dataset.originalLang;
+            const posterUrl = this.dataset.poster;
+            const animeUrl = this.dataset.animeUrl;
 
-                if (mediaType === 'anime' && animeUrl) {
-                    showAnimeInfo(animeUrl, title, tmdbId || null);
+            if (mediaType === 'anime' && animeUrl) {
+                showAnimeInfo(animeUrl, title, tmdbId || null);
+            } else {
+                showMovieInfo(tmdbId, mediaType, title, originalLang, posterUrl);
+            }
+        });
+
+        // Evento click en el botón (reproducir directamente)
+        const watchBtn = card.querySelector('.expanded-watch-btn');
+        if (watchBtn) {
+            watchBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const tmdbId = card.dataset.tmdbId;
+                const mediaType = card.dataset.mediaType;
+                const title = card.dataset.title;
+                const originalLang = card.dataset.originalLang;
+                const identifier = card.dataset.identifier;
+
+                const progress = getProgress(identifier, mediaType);
+                let season = null, episode = null;
+
+                if (mediaType === 'tv' && progress && progress.season !== undefined && progress.episode !== undefined) {
+                    season = progress.season;
+                    episode = progress.episode;
+                } else if (mediaType === 'anime' && !item.isMovie && progress && progress.episode !== undefined) {
+                    card.click();
+                    return;
+                }
+
+                if (mediaType === 'movie') {
+                    playMedia(tmdbId, 'movie', title, originalLang);
+                } else if (mediaType === 'tv' && season !== null && episode !== null) {
+                    playMedia(tmdbId, 'tv', title, originalLang, season, episode);
                 } else {
-                    showMovieInfo(tmdbId, mediaType, title, originalLang, posterUrl);
+                    card.click();
                 }
             });
+        }
 
-            // Evento click en el botón (reproducir directamente)
-            const watchBtn = card.querySelector('.expanded-watch-btn');
-            if (watchBtn) {
-                watchBtn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    const tmdbId = card.dataset.tmdbId;
-                    const mediaType = card.dataset.mediaType;
-                    const title = card.dataset.title;
-                    const originalLang = card.dataset.originalLang;
-                    const identifier = card.dataset.identifier;
-
-                    const progress = getProgress(identifier, mediaType);
-                    let season = null, episode = null;
-
-                    if (mediaType === 'tv' && progress && progress.season !== undefined && progress.episode !== undefined) {
-                        season = progress.season;
-                        episode = progress.episode;
-                    } else if (mediaType === 'anime' && !item.isMovie && progress && progress.episode !== undefined) {
-                        card.click();
-                        return;
-                    }
-
-                    if (mediaType === 'movie') {
-                        playMedia(tmdbId, 'movie', title, originalLang);
-                    } else if (mediaType === 'tv' && season !== null && episode !== null) {
-                        playMedia(tmdbId, 'tv', title, originalLang, season, episode);
-                    } else {
-                        card.click();
-                    }
-                });
-            }
-
-            card.style.animationDelay = `${index * 0.05}s`;
-            rowElement.appendChild(card);
-        });
-    }).catch(err => {
-        console.warn('Error cargando backdrops para recientes:', err);
-        // Fallback: cargar sin backdrops (usar solo póster)
-        recents.forEach((item, index) => {
-            // ... construir tarjetas sin backdrop (similar a antes pero con poster)
-            // Para simplificar, puedes reutilizar el código anterior sin la parte de backdrop
-        });
-    });
-}
-
-async function showRecentExpanded(card) {
-    // Si ya hay un flotante, lo ocultamos primero
-    hideRecentExpanded();
-
-    // Obtener datos de la tarjeta
-    const tmdbId = card.dataset.tmdbId;
-    const mediaType = card.dataset.mediaType;
-    const title = card.dataset.title;
-    const poster = card.dataset.poster;
-    const originalLang = card.dataset.originalLang;
-
-    // Determinar el tipo de contenido
-    let typeLabel = '';
-    if (mediaType === 'movie') typeLabel = 'Película';
-    else if (mediaType === 'tv') typeLabel = 'Serie';
-    else if (mediaType === 'anime') typeLabel = 'Anime';
-
-    // Obtener progreso (para series y anime)
-    let progress = null;
-    let episodeText = '';
-    let totalEpisodes = '';
-    if (tmdbId) {
-        progress = getProgress(tmdbId, mediaType);
-    }
-    if (mediaType === 'tv' && progress && progress.season !== undefined && progress.episode !== undefined) {
-        episodeText = `Capítulo ${progress.episode}`;
-        // Intentar obtener total de episodios (opcional)
-        try {
-            const url = `https://api.themoviedb.org/3/tv/${tmdbId}?api_key=${API_KEY}&language=es-ES`;
-            const resp = await fetch(url);
-            const data = await resp.json();
-            if (data.number_of_episodes) {
-                totalEpisodes = `${data.number_of_episodes} episodios`;
-            }
-        } catch (e) {}
-    } else if (mediaType === 'anime' && progress && progress.episode !== undefined) {
-        episodeText = `Capítulo ${progress.episode}`;
-        // Podríamos obtener total episodios desde la caché de animeInfoCache
-        // Pero por ahora lo dejamos opcional
-    }
-
-    // Obtener backdrop
-    let backdropUrl = '';
-    if (tmdbId && (mediaType === 'movie' || mediaType === 'tv')) {
-        try {
-            const url = `https://api.themoviedb.org/3/${mediaType === 'movie' ? 'movie' : 'tv'}/${tmdbId}?api_key=${API_KEY}&language=es-ES`;
-            const resp = await fetch(url);
-            const data = await resp.json();
-            if (data.backdrop_path) {
-                backdropUrl = `https://image.tmdb.org/t/p/w1280${data.backdrop_path}`;
-            }
-        } catch (e) {}
-    } else if (mediaType === 'anime' && tmdbId) {
-        // Intentar backdrop desde TMDB (series de anime)
-        try {
-            const url = `https://api.themoviedb.org/3/tv/${tmdbId}?api_key=${API_KEY}&language=es-ES`;
-            const resp = await fetch(url);
-            const data = await resp.json();
-            if (data.backdrop_path) {
-                backdropUrl = `https://image.tmdb.org/t/p/w1280${data.backdrop_path}`;
-            }
-        } catch (e) {}
-    }
-
-    // Si no hay backdrop, usamos el poster con efecto
-    const bgStyle = backdropUrl ? `url('${backdropUrl}')` : `url('${poster}')`;
-    const bgFilter = backdropUrl ? 'blur(0)' : 'blur(10px) brightness(0.4)';
-
-    // Crear elemento flotante
-    const expanded = document.createElement('div');
-    expanded.className = 'recent-expanded';
-    expanded.style.backgroundImage = bgStyle;
-    expanded.style.backgroundSize = 'cover';
-    expanded.style.backgroundPosition = 'center';
-
-    // Contenido
-    let watchButtonText = 'VER AHORA';
-    if (mediaType === 'movie') {
-        if (progress && progress.watched) watchButtonText = 'CONTINUAR VIENDO';
-    } else if (mediaType === 'tv' || mediaType === 'anime') {
-        if (episodeText) watchButtonText = `CONTINUAR ${episodeText.toUpperCase()}`;
-    }
-
-    let metaText = typeLabel;
-    if (totalEpisodes) metaText += ` • ${totalEpisodes}`;
-
-    expanded.innerHTML = `
-        <div class="expanded-overlay"></div>
-        <div class="expanded-content">
-            <div class="expanded-title">${title}</div>
-            <div class="expanded-meta">${metaText}</div>
-            <button class="expanded-watch-btn">${watchButtonText}</button>
-        </div>
-    `;
-
-    // Posicionar el flotante
-    const row = card.closest('.row');
-    const rect = card.getBoundingClientRect();
-    const rowRect = row.getBoundingClientRect();
-
-    // Ancho deseado: aproximadamente 3 tarjetas (3 * 220 + 2 * 20 = 700px)
-    const expandedWidth = Math.min(700, window.innerWidth - rect.right - 20);
-    expanded.style.width = expandedWidth + 'px';
-    expanded.style.left = (rect.right - rowRect.left) + 'px';
-    expanded.style.top = '0';
-    expanded.style.height = '100%';
-
-    // Ajustar si se sale por la derecha
-    if (rect.right + expandedWidth > window.innerWidth) {
-        expanded.style.left = (rect.left - rowRect.left - expandedWidth + card.offsetWidth) + 'px';
-    }
-
-    // Guardar referencia
-    recentExpandedElement = expanded;
-    row.appendChild(expanded);
-
-    // Animación de entrada
-    requestAnimationFrame(() => {
-        expanded.classList.add('visible');
+        card.style.animationDelay = `${cardIndex * 0.05}s`;
+        rowElement.appendChild(card);
+        cardIndex++;
     });
 
-    // Manejar click en el botón
-    const watchBtn = expanded.querySelector('.expanded-watch-btn');
-    watchBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        // Simular click en la tarjeta para abrir info/reproducir
-        card.click();
-        hideRecentExpanded();
-    });
+    console.log("DESPUÉS", rowElement.children.length);
 }
 
-function hideRecentExpanded() {
-    if (recentExpandedElement) {
-        recentExpandedElement.classList.remove('visible');
-        setTimeout(() => {
-            if (recentExpandedElement && recentExpandedElement.parentNode) {
-                recentExpandedElement.parentNode.removeChild(recentExpandedElement);
-            }
-            recentExpandedElement = null;
-        }, 300);
-    }
-}
 
 // ==================== FAVORITOS ====================
 function isFavorite(tmdbId, mediaType, title) {
