@@ -1281,10 +1281,8 @@ async function performSearch(query, filter) {
     currentSearchQuery = query.trim();
     currentSearchFilter = filter;
 
-    // Limpiar resultados anteriores
     loadedResultIds = new Set();
 
-    // Inicializar el estado para scroll infinito
     moreResultsState = {
         page: 1,
         totalPages: null,
@@ -1296,10 +1294,19 @@ async function performSearch(query, filter) {
         isSearch: true
     };
 
-        const resultsGrid = document.getElementById("search-results-grid");
-        resultsGrid.innerHTML = "";
+    const resultsGrid = document.getElementById("search-results-grid");
+    resultsGrid.innerHTML = "";
 
-    // Cargar la primera página
+    // ✅ Actualizar título y placeholder
+    const resultsTitle = document.getElementById('search-results-title');
+    if (resultsTitle) {
+        resultsTitle.textContent = `Resultados para "${query.trim()}"`;
+    }
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) {
+        searchInput.placeholder = `Buscar...`;
+    }
+
     await loadMoreResults();
 }
 
@@ -2266,7 +2273,7 @@ backButton.addEventListener("click", () => {
     removeGlobalPlayerListeners();
     playerContainer.innerHTML = "";
     document.querySelectorAll('.tab-content').forEach(content => content.style.display = '');
-
+    resetWatchTimer();
     if (logoDiv) logoDiv.style.display = "block";
 
     if (currentMovieData) {
@@ -3112,6 +3119,111 @@ function loadPopunder() {
     console.log('🔄 Popunder activado');
 }
 
+// ==================== POPUNDER CONTROLADO ====================
+let popunderScheduled = false;
+let popunderTimer = null;
+let popunderInterval = null;
+const POPUNDER_FIRST_DELAY = 10000;      // 10 segundos
+const POPUNDER_INTERVAL = 5 * 60 * 1000; // 20 minutos
+
+function schedulePopunder() {
+    if (popunderTimer) clearTimeout(popunderTimer);
+    if (popunderInterval) clearInterval(popunderInterval);
+
+    popunderTimer = setTimeout(() => {
+        const lastShow = localStorage.getItem('popunder_last_show');
+        const now = Date.now();
+        if (!lastShow || (now - parseInt(lastShow)) > POPUNDER_INTERVAL) {
+            loadPopunder();
+            localStorage.setItem('popunder_last_show', String(now));
+        }
+        popunderInterval = setInterval(() => {
+            const lastShowCheck = localStorage.getItem('popunder_last_show');
+            const nowCheck = Date.now();
+            if (!lastShowCheck || (nowCheck - parseInt(lastShowCheck)) > POPUNDER_INTERVAL) {
+                loadPopunder();
+                localStorage.setItem('popunder_last_show', String(nowCheck));
+            }
+        }, POPUNDER_INTERVAL);
+    }, POPUNDER_FIRST_DELAY);
+}
+
+// Iniciar el temporizador en la primera interacción del usuario
+document.addEventListener('click', function(e) {
+    if (e.target.closest('#player-fullscreen') || e.target.closest('#info-window')) {
+        return;
+    }
+    if (!popunderScheduled) {
+        popunderScheduled = true;
+        schedulePopunder();
+    }
+});
+
+// Si el usuario ya interactuó antes (por ejemplo, recarga la página), programar directamente
+if (localStorage.getItem('popunder_user_interacted') === 'true') {
+    popunderScheduled = true;
+    schedulePopunder();
+}
+
+// Marcar que el usuario interactuó en el primer clic (lo hacemos dentro del listener)
+// También puedes usar un evento de scroll o mousemove como alternativa
+
+// ==================== SMARTLINK DESPUÉS DE 5 MINUTOS ====================
+const SMARTLINK_URL = 'https://www.effectivecpmnetwork.com/qxxkrnbr2t?key=5a28222862a82ecb880b4834e9d2c40f';
+let watchTime = 0;
+let watchInterval = null;
+let smartlinkShown = false;
+const SMARTLINK_THRESHOLD = 1 * 60; // 5 minutos en segundos
+
+// Función para iniciar el seguimiento de tiempo de reproducción
+function startWatchTimer() {
+    if (watchInterval) return;
+    
+    watchInterval = setInterval(() => {
+        // Verificar si el video se está reproduciendo
+        const iframe = document.querySelector('#player-iframe-container iframe');
+        // Nota: No podemos acceder directamente al tiempo de un iframe de terceros.
+        // Alternativa: usar el tiempo de reproducción desde el reproductor o un contador simple.
+        
+        // Si el reproductor está visible, asumimos que se está reproduciendo
+        if (playerFullscreen.style.display === 'flex') {
+            watchTime++;
+            
+            if (watchTime >= SMARTLINK_THRESHOLD && !smartlinkShown) {
+                smartlinkShown = true;
+                showSmartlink();
+                clearInterval(watchInterval);
+                watchInterval = null;
+            }
+        }
+    }, 1000); // Cada segundo
+}
+
+// Función para detener el temporizador
+function stopWatchTimer() {
+    if (watchInterval) {
+        clearInterval(watchInterval);
+        watchInterval = null;
+    }
+}
+
+// Mostrar smartlink
+function showSmartlink() {
+    // Abrir el smartlink en una nueva ventana/pestaña
+    window.open(SMARTLINK_URL, '_blank');
+    
+    // También podrías mostrarlo como un overlay o ventana modal
+    console.log('🔗 Smartlink mostrado después de 5 minutos de reproducción');
+}
+
+// Reiniciar el contador cuando se cierra el reproductor
+function resetWatchTimer() {
+    watchTime = 0;
+    smartlinkShown = false;
+    stopWatchTimer();
+}
+
+
 // ==================== INICIALIZACIÓN ====================
 
 window.addEventListener("DOMContentLoaded", () => {
@@ -3119,14 +3231,6 @@ window.addEventListener("DOMContentLoaded", () => {
     loadGenreMaps();
     createCategoryButtons();
  
-// --- POPUNDER: clic en cualquier parte (excepto reproductor y ventana de info) ---
-document.addEventListener('click', function(e) {
-    // Excluir clics dentro del reproductor o la ventana de información
-    if (e.target.closest('#player-fullscreen') || e.target.closest('#info-window')) {
-        return;
-    }
-    loadPopunder();
-});
 
     // Filtros de búsqueda
     const filterBtns = document.querySelectorAll('.filter-btn');
