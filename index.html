@@ -107,7 +107,7 @@
 <!-- Contenedor para Buscar -->
 <div id="contenido-buscar" class="tab-content">
     <div id="search-container" class="search-container">
-        <!-- Barra superior: filtros a la izquierda, input a la derecha -->
+        <!-- Barra de filtros e input -->
         <div class="search-header">
             <div class="search-filters">
                 <button class="filter-btn active" data-filter="movie">Películas</button>
@@ -119,8 +119,12 @@
                 <button id="search-btn" class="search-submit-btn">🔍</button>
             </div>
         </div>
-        <!-- Resultados -->
-        <div class="search-results-wrapper">
+
+        <!-- DASHBOARD (visible por defecto) -->
+        <div id="search-dashboard" class="search-dashboard"></div>
+
+        <!-- RESULTADOS (oculto inicialmente) -->
+        <div id="search-results-wrapper" class="search-results-wrapper" style="display:none;">
             <h2 id="search-results-title">Resultados</h2>
             <div id="search-results-grid" class="search-results-grid"></div>
         </div>
