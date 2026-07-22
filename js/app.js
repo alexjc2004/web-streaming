@@ -14,6 +14,7 @@ let infiniteObserver = null;
 let loadedResultIds = new Set();
 let recentExpandedElement = null;
 let expandedCard = null;
+let searchDashboardVisible = true;  // true = mostrar dashboard, false = mostrar resultados
 // Al principio de app.js
 const animeInfoCache = {};
 // Estado de los carruseles (cada uno con su propio índice, intervalo y slides)
@@ -548,7 +549,7 @@ async function searchAnimeByTitle(title) {
 
 
 // ==================== CARGAR FILAS DE ANIME ====================
-async function loadAnimeRowIfAvailable(endpoint, rowId, categoryTitle, parentContainerId) {
+async function loadAnimeRowIfAvailable(endpoint, rowId, categoryTitle, parentContainerId, limit = null) {
     const container = document.getElementById(parentContainerId);
     if (!container) {
         console.warn(`Contenedor ${parentContainerId} no encontrado`);
@@ -579,11 +580,16 @@ async function loadAnimeRowIfAvailable(endpoint, rowId, categoryTitle, parentCon
             return false;
         }
 
-        console.log("ANTES", rowElement.children.length);
+        const filtered = animeAV1Results.filter(isSafeForAllAges);
+        let itemsToShow = filtered;
+        if (limit && limit > 0) {
+            itemsToShow = filtered.slice(0, limit);
+        }
+
         rowElement.innerHTML = '';
         let cardIndex = 0;
-        const filtered = animeAV1Results.filter(isSafeForAllAges);
-        filtered.slice(0, 20).forEach(item => {
+
+        itemsToShow.forEach(item => {
             const card = document.createElement('div');
             card.classList.add('movie');
 
@@ -591,11 +597,9 @@ async function loadAnimeRowIfAvailable(endpoint, rowId, categoryTitle, parentCon
             const poster = item.image || 'images/no-poster.jpg';
             const url = item.url;
 
-            // Guardamos la URL en dataset (solo necesitamos eso)
             card.dataset.url = url;
-            card.dataset.title = title; // opcional
+            card.dataset.title = title;
 
-            // Overlay con placeholders
             card.innerHTML = `
                 <img src="${poster}" alt="${title}" loading="lazy">
                 <div class="movie-overlay">
@@ -608,9 +612,7 @@ async function loadAnimeRowIfAvailable(endpoint, rowId, categoryTitle, parentCon
                 </div>
             `;
 
-            // ✅ Evento DENTRO del bucle
             card.addEventListener('mouseenter', function() {
-                // Debounce para evitar llamadas repetidas
                 if (this._hoverTimer) clearTimeout(this._hoverTimer);
                 this._hoverTimer = setTimeout(() => {
                     loadAnimeCardInfo(this, this.dataset.url);
@@ -626,7 +628,7 @@ async function loadAnimeRowIfAvailable(endpoint, rowId, categoryTitle, parentCon
             cardIndex++;
         });
 
-        // === TARJETA "VER MÁS" (corregido: ahora se añade antes del return) ===
+        // === TARJETA "VER MÁS" ===
         const verMasCard = document.createElement('div');
         verMasCard.classList.add('ver-mas-card', 'movie');
         verMasCard.innerHTML = `
@@ -635,16 +637,14 @@ async function loadAnimeRowIfAvailable(endpoint, rowId, categoryTitle, parentCon
                 <span class="ver-mas-icon">→</span>
             </div>
         `;
-        const genreQuery = endpoint.includes('genre=') ? endpoint.split('genre=')[1].split('&')[0] : '';
         verMasCard.style.animationDelay = `${cardIndex * 0.05}s`;
         verMasCard.addEventListener('click', () => {
             showMoreResults(categoryTitle, endpoint, rowId, 'anime', 'animeav1');
         });
         rowElement.appendChild(verMasCard);
 
-        // Actualizar botones después de añadir todo (con un pequeño retraso para asegurar renderizado)
         setTimeout(() => updateRowButtons(rowElement), 150);
-        console.log(`✅ ${categoryTitle} cargado con ${filtered.length} animes`);
+        console.log(`✅ ${categoryTitle} cargado con ${itemsToShow.length} animes`);
         return true;
 
     } catch (error) {
@@ -1098,6 +1098,13 @@ async function loadTabContent(tabId) {
             await loadDynamicRow("/discover/tv?with_genres=16,10751&certification_country=US&certification=TV-Y&sort_by=popularity.desc", "row-series-preescolar", "Series para niños pequeños", container.id, 'es-ES', 'tv');
         }
     } else if (tabId === 'buscar') {
+        if (searchDashboardVisible) {
+        loadSearchDashboard();
+    } else {
+        // Mostrar resultados ya cargados
+        document.getElementById('search-dashboard').style.display = 'none';
+        document.getElementById('search-results-wrapper').style.display = 'block';
+    }
         // No cargamos nada automático
     } else if (tabId === 'favoritos') {
         loadFavorites();
@@ -1141,6 +1148,191 @@ async function loadTabContent(tabId) {
         }
     }
 }
+
+async function loadSearchDashboard() {
+    const dashboard = document.getElementById('search-dashboard');
+    if (!dashboard) return;
+    dashboard.innerHTML = '';
+    dashboard.style.display = 'block';
+    document.getElementById('search-results-wrapper').style.display = 'none';
+    searchDashboardVisible = true;
+
+    const filter = currentSearchFilter; // 'movie', 'tv', 'anime'
+
+    // ==================== PELÍCULAS ====================
+    if (filter === 'movie') {
+        // --- Películas recientes (fila con 5 tarjetas + Ver más) ---
+        /*const containerId = 'dash-movie-recent';
+        const container = document.createElement('div');
+        container.id = containerId;
+        dashboard.appendChild(container);
+        await loadDynamicRow('/movie/now_playing', 'row-movie-dash', 'Películas recientes', containerId, 'es-ES', 'movie', 5);*/
+
+        // --- Géneros de películas ---
+        const genresContainer = document.createElement('div');
+        genresContainer.className = 'search-genres';
+        genresContainer.innerHTML = '<h3>Géneros</h3><div class="genre-grid"></div>';
+        dashboard.appendChild(genresContainer);
+        const genreGrid = genresContainer.querySelector('.genre-grid');
+        const genreEntries = Object.entries(genreMapMovie).slice(0, 20);
+        genreEntries.forEach(([id, name]) => {
+            const btn = document.createElement('button');
+            btn.textContent = name;
+            btn.dataset.genreId = id;
+            btn.addEventListener('click', () => {
+                searchByGenre(id, 'movie', name);
+            });
+            genreGrid.appendChild(btn);
+        });
+
+        // --- Listas personalizadas (Películas) ---
+        const customListsContainer = document.createElement('div');
+        customListsContainer.className = 'search-custom-lists';
+        customListsContainer.innerHTML = '<h3>Listas destacadas</h3><div class="custom-lists-grid"></div>';
+        dashboard.appendChild(customListsContainer);
+        const customGrid = customListsContainer.querySelector('.custom-lists-grid');
+
+        const movieLists = [
+            { name: 'Disney', endpoint: '/discover/movie?with_companies=2&sort_by=popularity.desc' },
+            { name: 'Warner Bros.', endpoint: '/discover/movie?with_companies=174&sort_by=popularity.desc' },
+            { name: 'Apple Studios', endpoint: '/discover/movie?with_companies=19551&sort_by=popularity.desc' },
+            { name: 'Netflix', endpoint: '/discover/movie?with_companies=213&sort_by=popularity.desc' },
+            { name: 'Amazon Studios', endpoint: '/discover/movie?with_companies=13241&sort_by=popularity.desc' },
+            { name: 'Paramount', endpoint: '/discover/movie?with_companies=4&sort_by=popularity.desc' },
+            { name: 'Sony Pictures', endpoint: '/discover/movie?with_companies=5&sort_by=popularity.desc' },
+            { name: 'Marvel', endpoint: '/discover/movie?with_companies=420&sort_by=popularity.desc' },
+            { name: 'Universal', endpoint: '/discover/movie?with_companies=33&sort_by=popularity.desc' },
+            
+        ];
+        movieLists.forEach(list => {
+            const btn = document.createElement('button');
+            btn.textContent = list.name;
+            btn.addEventListener('click', () => {
+                showMoreResults(list.name, list.endpoint, 'custom-list', 'movie', 'tmdb');
+            });
+            customGrid.appendChild(btn);
+        });
+
+    // ==================== SERIES ====================
+    } else if (filter === 'tv') {
+        // --- Series recientes ---
+        /*const containerId = 'dash-tv-recent';
+        const container = document.createElement('div');
+        container.id = containerId;
+        dashboard.appendChild(container);
+        await loadDynamicRow('/tv/on_the_air', 'row-tv-dash', 'Series recientes', containerId, 'es-ES', 'tv', 5);*/
+
+        // --- Géneros de series ---
+        const genresContainer = document.createElement('div');
+        genresContainer.className = 'search-genres';
+        genresContainer.innerHTML = '<h3>Géneros</h3><div class="genre-grid"></div>';
+        dashboard.appendChild(genresContainer);
+        const genreGrid = genresContainer.querySelector('.genre-grid');
+        const genreEntries = Object.entries(genreMapTv).slice(0, 20);
+        genreEntries.forEach(([id, name]) => {
+            const btn = document.createElement('button');
+            btn.textContent = name;
+            btn.dataset.genreId = id;
+            btn.addEventListener('click', () => {
+                searchByGenre(id, 'tv', name);
+            });
+            genreGrid.appendChild(btn);
+        });
+
+        // --- Listas personalizadas (Series) ---
+        const customListsContainer = document.createElement('div');
+        customListsContainer.className = 'search-custom-lists';
+        customListsContainer.innerHTML = '<h3>Listas destacadas</h3><div class="custom-lists-grid"></div>';
+        dashboard.appendChild(customListsContainer);
+        const customGrid = customListsContainer.querySelector('.custom-lists-grid');
+
+        const tvLists = [
+            { name: 'Netflix', endpoint: '/discover/tv?with_networks=213&sort_by=popularity.desc' },
+            { name: 'Disney+', endpoint: '/discover/tv?with_networks=2739&sort_by=popularity.desc' },
+            { name: 'Apple TV+', endpoint: '/discover/tv?with_networks=2552&sort_by=popularity.desc' },
+            { name: 'HBO Max', endpoint: '/discover/tv?with_networks=49&sort_by=popularity.desc' },
+            { name: 'Amazon Prime Video', endpoint: '/discover/tv?with_networks=1024&sort_by=popularity.desc' },
+            { name: 'Hulu', endpoint: '/discover/tv?with_networks=453&sort_by=popularity.desc' },
+            { name: 'Paramount +', endpoint: '/discover/tv?with_networks=434&sort_by=popularity.desc' },
+            { name: 'Mejores Valoradas', endpoint: '/discover/tv?sort_by=vote_average.desc&vote_count.gte=500' },
+        ];
+        tvLists.forEach(list => {
+            const btn = document.createElement('button');
+            btn.textContent = list.name;
+            btn.addEventListener('click', () => {
+                showMoreResults(list.name, list.endpoint, 'custom-list', 'tv', 'tmdb');
+            });
+            customGrid.appendChild(btn);
+        });
+
+    // ==================== ANIME ====================
+    } else if (filter === 'anime') {
+        // --- Anime reciente ---
+        /*const containerId = 'dash-anime-recent';
+        const container = document.createElement('div');
+        container.id = containerId;
+        dashboard.appendChild(container);
+        await loadAnimeRowIfAvailable('/catalog?sort=recent&provider=animeav1', 'row-anime-dash', 'Anime reciente', containerId, 5);*/
+
+        // --- Géneros de anime (lista predefinida) ---
+        const animeGenres = ['Acción', 'Aventura', 'Comedia', 'Drama', 'Fantasía', 'Romance', 'Ciencia Ficción', 'Shonen', 'Deportes', 'Terror', 'Mecha', 'Magia', 'Isekai', 'Sobrenatural', 'Misterio', 'Psicológico'];
+        const genresContainer = document.createElement('div');
+        genresContainer.className = 'search-genres';
+        genresContainer.innerHTML = '<h3>Géneros</h3><div class="genre-grid"></div>';
+        dashboard.appendChild(genresContainer);
+        const genreGrid = genresContainer.querySelector('.genre-grid');
+        animeGenres.forEach(genre => {
+            const btn = document.createElement('button');
+            btn.textContent = genre;
+            btn.addEventListener('click', () => {
+                searchByGenre(genre, 'anime', genre);
+            });
+            genreGrid.appendChild(btn);
+        });
+
+        // --- Listas personalizadas (Anime) ---
+        const customListsContainer = document.createElement('div');
+        customListsContainer.className = 'search-custom-lists';
+        customListsContainer.innerHTML = '<h3>Listas destacadas</h3><div class="custom-lists-grid"></div>';
+        dashboard.appendChild(customListsContainer);
+        const customGrid = customListsContainer.querySelector('.custom-lists-grid');
+
+        const animeLists = [
+            // Búsquedas por franquicias populares (usamos búsqueda para obtener resultados de AnimeAV1)
+            { name: 'Dragon Ball', endpoint: '/search?q=dragon%20ball&provider=animeav1' },
+            { name: 'Naruto', endpoint: '/search?q=naruto&provider=animeav1' },
+            { name: 'One Piece', endpoint: '/search?q=one%20piece&provider=animeav1' },
+            { name: 'Attack on Titan', endpoint: '/search?q=attack%20on%20titan&provider=animeav1' },
+            { name: 'Bleach', endpoint: '/search?q=bleach&provider=animeav1' },
+            // Catálogos por tipo o género (si la API lo soporta)
+            { name: 'Películas de anime', endpoint: '/search?q=movie&provider=animeav1' },
+            
+        ];
+        animeLists.forEach(list => {
+            const btn = document.createElement('button');
+            btn.textContent = list.name;
+            btn.addEventListener('click', () => {
+                showMoreResults(list.name, list.endpoint, 'custom-list', 'anime', 'animeav1');
+            });
+            customGrid.appendChild(btn);
+        });
+    }
+}
+
+function searchByGenre(genreId, filter, genreName) {
+    if (filter === 'movie') {
+        const endpoint = `/discover/movie?with_genres=${genreId}&sort_by=popularity.desc`;
+        showMoreResults(genreName, endpoint, 'genre-search', 'movie', 'tmdb');
+    } else if (filter === 'tv') {
+        const endpoint = `/discover/tv?with_genres=${genreId}&sort_by=popularity.desc`;
+        showMoreResults(genreName, endpoint, 'genre-search', 'tv', 'tmdb');
+    } else if (filter === 'anime') {
+        const genreSlug = genreName.toLowerCase().replace(/ /g, '-');
+        const endpoint = `/catalog?genre=${genreSlug}&provider=animeav1`;
+        showMoreResults(genreName, endpoint, 'genre-search', 'anime', 'animeav1');
+    }
+}
+
 
 // ==================== TEXTO DEL BOTÓN (COMÚN) ====================
 function getWatchButtonText(mediaType, identifier, isMovie = false) {
@@ -1278,6 +1470,11 @@ function activarSonido() {
 async function performSearch(query, filter) {
     if (!query.trim()) return;
 
+    // Ocultar dashboard y mostrar resultados
+    searchDashboardVisible = false;
+    document.getElementById('search-dashboard').style.display = 'none';
+    document.getElementById('search-results-wrapper').style.display = 'block';
+
     currentSearchQuery = query.trim();
     currentSearchFilter = filter;
 
@@ -1403,7 +1600,7 @@ function reproducirDesdeInfo() {
 }
 
 // ==================== LOAD DYNAMIC ROW (TMDB) ====================
-async function loadDynamicRow(endpoint, rowId, categoryTitle, parentContainerId = 'categories-container', language = 'es-ES', contentType = 'movie') {
+async function loadDynamicRow(endpoint, rowId, categoryTitle, parentContainerId = 'categories-container', language = 'es-ES', contentType = 'movie', limit = null) {
     const container = document.getElementById(parentContainerId);
     if (!container) {
         console.error(`No se encuentra contenedor ${parentContainerId}`);
@@ -1425,8 +1622,13 @@ async function loadDynamicRow(endpoint, rowId, categoryTitle, parentContainerId 
         return;
     }
 
+
+
+
     // Mostrar mensaje de carga
     rowElement.innerHTML = `<div style="color: white; padding: 20px;">Cargando ${categoryTitle}...</div>`;
+
+
 
     try {
         const separator = endpoint.includes('?') ? '&' : '?';
@@ -1440,15 +1642,23 @@ async function loadDynamicRow(endpoint, rowId, categoryTitle, parentContainerId 
             throw new Error(`HTTP ${response.status}: ${data.status_message || 'Error desconocido'}`);
         }
 
-        if (!data.results || data.results.length === 0) {
-            rowElement.innerHTML = `<div style="color: #aaa; padding: 20px;">No hay contenido disponible para ${categoryTitle}</div>`;
-            return;
-        }
+    if (!data.results || data.results.length === 0) {
+                rowElement.innerHTML = `<div style="color: #aaa; padding: 20px;">No hay contenido disponible para ${categoryTitle}</div>`;
+                return;
+            }
+
+
+            // 🔥 Limitar resultados si se especifica
+            let results = data.results;
+            if (limit && limit > 0) {
+                results = results.slice(0, limit);
+            }
+
 
         rowElement.innerHTML = "";
         let cardIndex = 0;
 
-        for (const item of data.results) {
+        for (const item of results) {
             const card = document.createElement("div");
             card.classList.add("movie");
 
@@ -1521,9 +1731,16 @@ async function loadDynamicRow(endpoint, rowId, categoryTitle, parentContainerId 
         console.error(`Error cargando ${categoryTitle}:`, error);
         rowElement.innerHTML = `<div style="color: red; padding: 20px;">Error al cargar ${categoryTitle}. Ver consola.</div>`;
     }
+
+    
+
 }
 
 function showMoreResults(categoryTitle, endpoint, rowId, contentType = 'movie', provider = 'tmdb') {
+    searchDashboardVisible = false;
+    document.getElementById('search-dashboard').style.display = 'none';
+    document.getElementById('search-results-wrapper').style.display = 'block';
+
     moreResultsState = {
         endpoint: endpoint,
         page: 1,
@@ -3119,54 +3336,6 @@ function loadPopunder() {
     console.log('🔄 Popunder activado');
 }
 
-// ==================== POPUNDER CONTROLADO ====================
-let popunderScheduled = false;
-let popunderTimer = null;
-let popunderInterval = null;
-const POPUNDER_FIRST_DELAY = 10000;      // 10 segundos
-const POPUNDER_INTERVAL = 5 * 60 * 1000; // 20 minutos
-
-function schedulePopunder() {
-    if (popunderTimer) clearTimeout(popunderTimer);
-    if (popunderInterval) clearInterval(popunderInterval);
-
-    popunderTimer = setTimeout(() => {
-        const lastShow = localStorage.getItem('popunder_last_show');
-        const now = Date.now();
-        if (!lastShow || (now - parseInt(lastShow)) > POPUNDER_INTERVAL) {
-            loadPopunder();
-            localStorage.setItem('popunder_last_show', String(now));
-        }
-        popunderInterval = setInterval(() => {
-            const lastShowCheck = localStorage.getItem('popunder_last_show');
-            const nowCheck = Date.now();
-            if (!lastShowCheck || (nowCheck - parseInt(lastShowCheck)) > POPUNDER_INTERVAL) {
-                loadPopunder();
-                localStorage.setItem('popunder_last_show', String(nowCheck));
-            }
-        }, POPUNDER_INTERVAL);
-    }, POPUNDER_FIRST_DELAY);
-}
-
-// Iniciar el temporizador en la primera interacción del usuario
-document.addEventListener('click', function(e) {
-    if (e.target.closest('#player-fullscreen') || e.target.closest('#info-window')) {
-        return;
-    }
-    if (!popunderScheduled) {
-        popunderScheduled = true;
-        schedulePopunder();
-    }
-});
-
-// Si el usuario ya interactuó antes (por ejemplo, recarga la página), programar directamente
-if (localStorage.getItem('popunder_user_interacted') === 'true') {
-    popunderScheduled = true;
-    schedulePopunder();
-}
-
-// Marcar que el usuario interactuó en el primer clic (lo hacemos dentro del listener)
-// También puedes usar un evento de scroll o mousemove como alternativa
 
 // ==================== SMARTLINK DESPUÉS DE 5 MINUTOS ====================
 const SMARTLINK_URL = 'https://www.effectivecpmnetwork.com/qxxkrnbr2t?key=5a28222862a82ecb880b4834e9d2c40f';
@@ -3241,11 +3410,19 @@ window.addEventListener("DOMContentLoaded", () => {
             this.classList.add('active');
             // Cambiar filtro
             currentSearchFilter = this.dataset.filter;
-            // Repetir búsqueda con el texto actual
             const searchInput = document.getElementById('search-input');
-            if (searchInput) {
-                performSearch(searchInput.value, currentSearchFilter);
+            const query = searchInput ? searchInput.value.trim() : '';
+            if (query !== '') {
+                // Si hay texto, buscar
+                performSearch(query, currentSearchFilter);
+            } else {
+            // Si no hay texto, recargar el dashboard (si estamos en la pestaña de búsqueda)
+            const activeTab = document.querySelector('.tab-btn.active');
+            if (activeTab && activeTab.dataset.tab === 'buscar') {
+                searchDashboardVisible = true;
+                loadSearchDashboard();
             }
+        }
         });
     });
 
