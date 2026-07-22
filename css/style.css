@@ -813,10 +813,11 @@ button:focus {
     display: flex;
     flex-direction: column;
     padding: 20px 40px;
-    height: calc(100vh - 150px);
+    height: auto;
     min-height: 500px;
     gap: 20px;
     align-items: center;
+    overflow: hidden;
 }
 
 .search-header {
@@ -839,7 +840,6 @@ button:focus {
     color: #aaa;
     border: 2px solid #333;
     padding: 8px 20px;
-    border-radius: 30px;
     font-size: 0.95rem;
     font-weight: bold;
     cursor: pointer;
@@ -979,6 +979,8 @@ button:focus {
         padding: 15px 20px;
         height: auto;
         gap: 12px;
+        margin-right: 10px;
+        margin-left: 10px;
     }
     .search-header {
         flex-direction: column;
@@ -1396,7 +1398,7 @@ button:focus {
     color: #aaa;
     border: 2px solid #333;
     padding: 10px 24px;
-    border-radius: 30px;
+    border-radius: 4px;
     font-size: 1rem;
     font-weight: bold;
     cursor: pointer;
@@ -1893,7 +1895,7 @@ button:focus {
 
 @media (max-width: 600px) {
     .favoritos-grid {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
     }
 
     .recent-item.expanded {
@@ -2097,5 +2099,155 @@ button:focus {
     }
     .episodes-container {
         max-height: 150px;
+    }
+
+
+
+}
+
+/* ===== DASHBOARD DE BÚSQUEDA ===== */
+.search-dashboard {
+    display: block;
+    width: min-content;
+    width: 100%; 
+    box-sizing: border-box;
+    
+}
+
+.search-genres {
+    margin-top: 30px;
+    margin-bottom: 30px;
+    padding: 0 10px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.search-genres h3 {
+    color: #fff;
+    font-size: 1.6rem;
+    margin-bottom: 15px;
+}
+
+.genre-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: flex-start;
+}
+
+.genre-grid button {
+    background: #2a2a2a;
+    color: #ddd;
+    border: 2px solid #444;
+    padding: 20px 28px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex: 0 1 auto;           /* No crecen, pero se encogen si es necesario */
+    white-space: nowrap;
+}
+
+.genre-grid button:hover {
+    background: #e50914;
+    border-color: #e50914;
+    color: #fff;
+    transform: scale(1.05);
+}
+
+/* Asegurar que las filas dentro del dashboard usen el mismo estilo */
+.search-dashboard .category {
+    margin: 0 0 30px 0;
+}
+
+.search-dashboard .category h2 {
+    font-size: 1.6rem;
+}
+
+.search-dashboard .row {
+    overflow-x: auto;
+    overflow-y: visible;
+    padding: 10px 0;
+    gap: 15px;
+    flex-wrap: nowrap; 
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .search-dashboard {
+    justify-self: auto;
+    
+    }
+    .search-genres {
+    margin-top: 30px;
+    padding: 0 10px;
+    width: 600px;
+}
+
+    .genre-grid button {
+        font-size: 0.8rem;
+        padding: 11px 24px;
+    }
+    .search-genres h3 {
+        font-size: 1.3rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .search-genres {
+    margin-top: 30px;
+    padding: 0 10px;
+    width: 350px;
+}
+    .search-dashboard .row {
+    width: 400px;
+}
+
+}
+
+/* ===== LISTAS PERSONALIZADAS EN EL BUSCADOR ===== */
+.search-custom-lists {
+    margin-top: 30px;
+    padding: 0 10px;
+}
+.search-custom-lists h3 {
+    color: #fff;
+    font-size: 1.6rem;
+    margin-bottom: 15px;
+}
+.custom-lists-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+.custom-lists-grid button {
+    background: #2a2a2a;
+    color: #ddd;
+    border: 2px solid #444; /* borde rojo para distinguir */
+    padding: 20px 28px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.custom-lists-grid button:hover {
+    background: #e50914;
+    border-color: #e50914;
+    color: #fff;
+    transform: scale(1.05);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .custom-lists-grid button {
+        font-size: 0.8rem;
+        padding: 11px 24px;
+    }
+    .search-custom-lists h3 {
+        font-size: 1.3rem;
+    }
+}
+@media (max-width: 480px) {
+    .custom-lists-grid button {
+        font-size: 0.8rem;
+        padding: 11px 24px;
     }
 }
